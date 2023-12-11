@@ -1,0 +1,11 @@
+---
+title: "Workflowr page from the Gibbs DTE paper"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    toc: false
+editor_options:
+  chunk_output_type: console
+---
+
+This website hosts code for the Gibbs DTE pipeline paper, which presents an optimized DTE pipeline via Gibbs resampling with `catchSalmon` from the R/Bioconductor package [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html). 
