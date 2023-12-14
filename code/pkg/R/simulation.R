@@ -1,20 +1,20 @@
 gammaToLogNormal <- function(x,shape,scale){
   # This function transforms a vector of gamma random variables to an equivalent
-  # vector of log-normal random variables using quantile transformation. We 
+  # vector of log-normal random variables using quantile transformation. We
   # implemented this function aiming to compare downstream DTE results between
   # scenarios in which the expression levels follow either a gamma or log-normal
   # distribution
-  
+
   sigma2 <- log((shape + 1) / shape)
   mu <- 3 / 2 * log(shape) + log(scale) - 0.5 * log(shape + 1)
-  
+
   ylnorm <- x
   pupper <- pgamma(x,shape = shape,scale = scale,lower.tail = FALSE,log.p = TRUE)
   plower <- pgamma(x,shape = shape,scale = scale,lower.tail = TRUE,log.p = TRUE)
   up <- pupper < plower
   if(any(up)) ylnorm[up] <- qlnorm(pupper[up],meanlog=mu,sdlog=sqrt(sigma2),lower.tail=FALSE,log.p=TRUE)
   if(any(!up)) ylnorm[!up] <- qlnorm(plower[!up],meanlog=mu,sdlog=sqrt(sigma2),lower.tail=TRUE,log.p=TRUE)
-  
+
   return(ylnorm)
 }
 
@@ -26,43 +26,43 @@ simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,
   # Chi-square degrees of freedom, and a different dispersion trend.
   # See ?baselineAbundance_function for goodTuringProportions usage in this
   # simulation.
-  
+
   n.groups <- length(n.libs)
   n.samples <- sum(n.libs)
   if (n.groups > 2) stop('This function does not support more than 2 groups')
-  
+
   # Generating baseline proportions
   goodTuring <- get('baselineAbundance_function')
   baselineAbundance <- goodTuring(seq_len(n.feat) / (n.feat + 1))
   baselineAbundance <- baselineAbundance/sum(baselineAbundance)
   baselineAbundancePerGroup <- matrix(baselineAbundance,ncol = n.groups,nrow = n.feat)
-  
+
   # Generating DE status for 2 groups
   topTx <- order(baselineAbundance,decreasing = TRUE)[seq(from = 1,length.out = min(top.cutoff,n.feat))]
   topTxDE <- sample(topTx,num.DE,replace = FALSE)
   names(topTxDE) <- as.character(sample(1:4,length(topTxDE),replace = TRUE))
-  
+
   de.Up1.Base2 <- topTxDE[names(topTxDE) == '1']
   de.Down1.Base2 <- topTxDE[names(topTxDE) == '2']
   de.Up2.Base1 <- topTxDE[names(topTxDE) == '3']
   de.Down2.Base1 <- topTxDE[names(topTxDE) == '4']
-  
+
   baselineAbundancePerGroup[de.Up1.Base2,1] <- fc*baselineAbundancePerGroup[de.Up1.Base2,1]
   baselineAbundancePerGroup[de.Down1.Base2,1] <- (1/fc)*baselineAbundancePerGroup[de.Down1.Base2,1]
   baselineAbundancePerGroup[de.Up2.Base1,2] <- fc*baselineAbundancePerGroup[de.Up2.Base1,2]
   baselineAbundancePerGroup[de.Down2.Base1,2] <- (1/fc)*baselineAbundancePerGroup[de.Down2.Base1,2]
-  
+
   de <- vector('numeric',n.feat)
   de[topTxDE[names(topTxDE) %in% c('2','3')]] <- 1L # Up in group 2
   de[topTxDE[names(topTxDE) %in% c('1','4')]] <- -1L # Down in group 2
-  
+
   # Generating expected counts
   mu0 <- lapply(seq_len(n.groups),function(x){
     size <- lib.sizes[seq(1 + n.libs[x] * (x - 1), n.libs[x] * x)]
     matrix(baselineAbundancePerGroup[,x],n.feat,1) %*% matrix(size,1,length(size))
   })
   mu0 <- do.call(cbind,mu0)
-  
+
   # Generating random noise around dispersion trend. I am generating 1 RV per
   # transcript per group. In the voom simulation, we had 1 RV per gene per sample.
   # Here, I am arguing that the expression level and dispersion should be exactly
@@ -74,31 +74,31 @@ simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,
     matrix(rv,ncol = n.libs[x],nrow = n.feat)
   })
   chisq <- do.call(cbind,chisq)
-  
+
   # Biological variation and Dispersion trend
   bcv0 <- bcv.true + 1/sqrt(mu0)
   disp <- bcv0 ^ 2 * chisq
-  
+
   # Biological variation
   shape <- 1/disp
   scale <- mu0/shape
-  
+
   expr <- rgamma(n.feat * n.samples, shape = shape, scale = scale)
-  
+
   if (isTRUE(lognormal)) {
     gammaToLogNormalVectorized <- Vectorize(gammaToLogNormal)
     expr <- gammaToLogNormalVectorized(expr,shape = c(shape),scale = c(scale))
   }
-  
+
   expr <- matrix(expr,nrow =  n.feat, ncol =  n.samples)
-  
+
   # Shuffling matrices (to be matched with reference data)
   key <- sample(n.feat,replace = FALSE)
   expr <- expr[key,]
   mu0 <- mu0[key,]
   disp <- disp[key,]
   de <- de[key]
-  
+
   return(list('expr' = expr,'mu' = mu0,'disp' = disp,'de' = de))
 }
 
@@ -106,48 +106,48 @@ simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,
 simulateTPM <- function(contigs,contigs.subset,
                         n.libs,lib.sizes,top.cutoff,
                         num.DE,fc,lognormal){
-  
+
   # Generating sample labels
   group <- rep(LETTERS[seq_len(length(n.libs))],times = n.libs)
   rep <- unlist(lapply(n.libs,seq_len))
   group.name <- paste(paste0('group', group), paste0('rep',rep), sep = '_')
-  
+
   # Simulating transcript-wise expression
   trExpr <- simulateExpr(n.feat = nrow(contigs.subset),
                          n.libs = n.libs,lib.sizes = lib.sizes,
                          top.cutoff = top.cutoff,num.DE = num.DE,fc = fc,
                          lognormal = lognormal)
-  
+
   # Generating TPM values
   tpm <- trExpr$expr / contigs.subset$Length
   tpm <- 1e6 * t(t(tpm) / colSums(tpm))
-  
+
   # Organizing contigs.subset
   dimnames(tpm) <- dimnames(trExpr$expr) <- dimnames(trExpr$mu) <- dimnames(trExpr$disp) <- list(contigs.subset$TranscriptID,group.name)
   names(trExpr$de) <- contigs.subset$TranscriptID
-  
+
   # Merging contigs.subset values to contigs
   tpm.contigs <- expr.contigs <- mu.contigs <- disp.contigs <- matrix(NA, nrow(contigs), sum(n.libs))
   de.contigs <- rep(NA,nrow(contigs))
-  
+
   dimnames(tpm.contigs) <- dimnames(expr.contigs) <- dimnames(mu.contigs) <- dimnames(disp.contigs) <- list(contigs$TranscriptID,group.name)
   names(de.contigs) <- contigs$TranscriptID
-  
-  
+
+
   key <- match(contigs.subset$TranscriptID, contigs$TranscriptID)
   tpm.contigs[key,] <- tpm
   expr.contigs[key,] <- trExpr$expr
   mu.contigs[key,] <- trExpr$mu
   disp.contigs[key,] <- trExpr$disp
   de.contigs[key] <- trExpr$de
-  
+
   return(list('tpm' = tpm.contigs,'expr' = expr.contigs,'mu' = mu.contigs,'disp' = disp.contigs,'de' = de.contigs))
 }
 
 #' @importFrom data.table as.data.table
 selectTx <- function(contigs,genome,max.tx){
   DT <- as.data.table(contigs)
-  
+
   # Selecting reference ranking
   if (is.character(genome)) {
     if (genome == 'mm39') DT.ref <- get('GSE60450')
@@ -155,12 +155,12 @@ selectTx <- function(contigs,genome,max.tx){
   } else {
     DT.ref <- genome
   }
-  
+
   # Merging rankings and keeping reference transcripts
   key <- match(DT$TranscriptID,DT.ref$TranscriptID)
   DT$TxRank <- DT.ref$Rank[key]
   DT <- DT[!is.na(DT$TxRank),]
-  
+
   # Subsetting transcripts
   filtrTx <- seq(from = 1,length.out = min(max.tx,max(DT$TxRank)))
   DT.sub <- DT[TxRank %in% filtrTx,selectTx := TRUE,by = 'GeneID'][(selectTx),]
@@ -183,7 +183,7 @@ readFasta <- function(fasta){
 simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
                           fc,num.DE,top.cutoff,max.tx,genome,BPPARAM,read.length,
                           fragment.length.min,lognormal){
-  
+
   # Checking if simulation has already been run
   dir.create(dest,showWarnings = FALSE,recursive = TRUE)
   out.files <- file.path(dest,c('counts.tsv.gz','targets.tsv.gz','tpm.tsv.gz'))
@@ -192,33 +192,33 @@ simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
     message('Reads already simulated!')
     return(invisible(NULL))
   }
-  
+
   # Scanning fasta
   message('Preparing fasta file for simulation...')
   contigs <- readFasta(fasta)
-  
+
   # Subsetting transcripts according to curated data and bringing metadata
   message('Subsetting transcripts...')
   contigs.subset <- selectTx(contigs,genome,max.tx)
-  
+
   # Simulating tx-wise TPMs from genes
   message('Simulating transcript-wise TPM...')
   txTPM <- simulateTPM(contigs = contigs, contigs.subset = contigs.subset,
-                       lib.sizes = lib.sizes,n.libs = n.libs, 
+                       lib.sizes = lib.sizes,n.libs = n.libs,
                        top.cutoff = top.cutoff,num.DE = num.DE,fc = fc,
                        lognormal = lognormal)
-  
+
   # Getting quality reference
   quality.source <- ifelse(read.length %in% c(75, 100),'Rsubread','rfun')
   quality.reference <- list.files(system.file(package = quality.source,'qualf'),
                                   paste0('-',read.length,'bp'),full.names = TRUE)
-  
+
   # Running simReads
   message('Simulating reads...')
   curwd <- getwd()
   setwd(tmpdir)
   out <- bplapply(seq_len(sum(n.libs)), FUN = function(i){
-    simReads(transcript.file = fasta, expression.levels = txTPM$tpm[, i], 
+    simReads(transcript.file = fasta, expression.levels = txTPM$tpm[, i],
              output.prefix = colnames(txTPM$tpm)[i],library.size = lib.sizes[i],
              paired.end = paired.end, simplify.transcript.names = TRUE,
              fragment.length.min = fragment.length.min,read.length = read.length,
@@ -226,28 +226,28 @@ simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
   },BPPARAM = BPPARAM)
   out.fastq <- normalizePath(list.files('.',"group*.*.fastq.gz",full.names = TRUE))
   setwd(curwd)
-  
+
   # Saving metadata
   message('Saving metadata...')
   mat <- do.call(cbind,lapply(out,function(x){x$NReads}))
   colnames(mat) <- colnames(txTPM$tpm)
-  
+
   out <- cbind(contigs[,c("TranscriptID","Length",'GeneID')],'status' = txTPM$de,mat)
   rownames(out) <- NULL
   write_tsv(x = out,file = out.files['counts'],col_names = TRUE,quote = 'none')
-  
+
   out.tpm <- txTPM$tpm
   out.tpm[is.na(out.tpm)] <- 0L
   out.tpm <- cbind(contigs[,c("TranscriptID","Length",'GeneID')],'status' = txTPM$de,out.tpm)
   rownames(out.tpm) <- NULL
   write_tsv(x = out.tpm,file = out.files['tpm'],col_names = TRUE,quote = 'none')
-  
+
   targets <- data.frame('R1' = out.fastq[grepl("R1.fastq.gz",out.fastq)])
   if (isTRUE(paired.end)) {
     targets$R2 <- out.fastq[grepl("R2.fastq.gz",out.fastq)]
   }
   write_tsv(x = targets,file = out.files['targets'],col_names = TRUE,quote = 'none')
-  
+
   message('Simulation of sequencing reads completed!')
 }
 
@@ -255,6 +255,10 @@ simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
 simulateExperiment <- function(dest,
                                fasta,
                                genome,
+                               bin.salmon,
+                               index.salmon,
+                               bin.kallisto,
+                               index.kallisto,
                                tmpdir = tempdir(),
                                max.tx = Inf,
                                workers = 1,
@@ -268,18 +272,14 @@ simulateExperiment <- function(dest,
                                read.length = 75,
                                fragment.length.min = 150,
                                lognormal = FALSE,
-                               bin.salmon = "/stornext/General/data/academic/lab_smyth/baldoni.p/software/salmon-1.9.0_linux_x86_64/bin/salmon",
-                               index.salmon = file.path("/stornext/General/data/academic/lab_smyth/baldoni.p/software/SalmonIndex",genome,"transcripts_index/"),
                                opts.salmon.boot =  paste('-p',workers,'-l A --numBootstraps 100 --validateMappings'),
                                opts.salmon.gibbs =  paste('-p',workers,'-l A --numGibbsSamples 100 --validateMappings'),
-                               bin.kallisto = "/stornext/General/data/academic/lab_smyth/baldoni.p/software/kallisto/kallisto",
-                               index.kallisto = file.path("/stornext/General/data/academic/lab_smyth/baldoni.p/software/kallistoIndex",genome,"transcripts_index"),
                                opts.kallisto = paste0('--bootstrap-samples=100 --threads=',workers),
                                run.salmon = TRUE,
                                run.kallisto = TRUE,
                                run.dte = TRUE,
                                seed = NULL){
-  
+
   # Setting up parallel computing
   if (is.null(seed)) {
     BPPARAM <- MulticoreParam(workers = workers, progressbar = TRUE)
@@ -288,14 +288,14 @@ simulateExperiment <- function(dest,
     BPPARAM <- MulticoreParam(workers = workers, progressbar = TRUE,RNGseed = seed)
   }
   register(BPPARAM = BPPARAM)
-  
+
   # Preparing directories
   dir.create(tmpdir,recursive = TRUE,showWarnings = FALSE)
   dir.create(dest,recursive = TRUE,showWarnings = FALSE)
-  
+
   tmpdir <- normalizePath(tmpdir)
   dest <- normalizePath(dest)
-  
+
   # Simulating FASTQs
   simulateFASTQ(fasta = fasta,n.libs = n.libs,tmpdir = tmpdir,
                 lib.sizes = lib.sizes,dest = file.path(dest,'meta'), fc = fc,
@@ -303,7 +303,7 @@ simulateExperiment <- function(dest,
                 genome = genome, max.tx = max.tx,BPPARAM = BPPARAM,
                 read.length = read.length,fragment.length.min = fragment.length.min,
                 lognormal = lognormal)
-  
+
   # Quantifying FASTQs
   path.targets <- file.path(dest,'meta/targets.tsv.gz')
   quantifyReads(targets = path.targets,dest = dest,
@@ -311,12 +311,12 @@ simulateExperiment <- function(dest,
                 bin.salmon = bin.salmon,index.salmon = index.salmon,opts.salmon.boot = opts.salmon.boot, opts.salmon.gibbs = opts.salmon.gibbs,
                 bin.kallisto = bin.kallisto,index.kallisto = index.kallisto,opts.kallisto = opts.kallisto,
                 run.salmon = run.salmon, run.kallisto = run.kallisto)
-  
+
   # Running methods
   if (isTRUE(run.dte)) {
     runDTEMethods(dest = file.path(dest),run.salmon = run.salmon, run.kallisto = run.kallisto)
   }
-  
+
   # Organizing FASTQ files
   path.fastq <- read.delim(path.targets,header = TRUE)
   if (isTRUE(keep.fastq)) {
@@ -332,34 +332,34 @@ runDTEMethods <- function(dest,run.salmon,run.kallisto){
   if (run.salmon) {
     message('Running DTE methods with Salmon quantification (with bootstrap resampling)...')
     dir.create(file.path(dest,'dte-salmon'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon') 
+    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon')
     if (file.exists(file.path(dest, 'dte-salmon', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
       stop('DTE analysis w/ Salmon failed!')
     }
-    
+
     message('Running DTE methods with Salmon quantification (with Gibbs resampling)...')
     dir.create(file.path(dest,'dte-salmon-gibbs'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon') 
+    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon')
     if (file.exists(file.path(dest, 'dte-salmon-gibbs', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
       stop('DTE analysis w/ Salmon failed!')
     }
   }
-  
+
   if (run.kallisto) {
     message('Running DTE methods with kallisto quantification...')
     dir.create(file.path(dest,'dte-kallisto'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto') 
+    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto')
     if (file.exists(file.path(dest, 'dte-kallisto', 'time.tsv'))) {
       message('DTE analysis w/ kallisto completed!')
     } else{
       stop('DTE analysis w/ kallisto failed!')
     }
   }
-  
+
   return(invisible())
 }
 
@@ -377,25 +377,25 @@ quantifyReads <- function(targets,
                           opts.kallisto,
                           run.salmon,
                           run.kallisto){
-  
+
   df.targets <- read.delim(targets,header = TRUE)
-  
+
   if (run.kallisto) {
     dir.kallisto <- file.path(dest,'quant-kallisto')
-    
+
     message('Quantifying reads with kallisto...')
     dir.create(dir.kallisto,recursive = TRUE,showWarnings = FALSE)
     runKallisto(bin = bin.kallisto,
                 index = index.kallisto,
                 options = opts.kallisto,
-                targets = df.targets, 
+                targets = df.targets,
                 dest = dir.kallisto)
   }
-  
+
   if (run.salmon) {
     dir.salmon.boot <- file.path(dest,'quant-salmon')
     dir.salmon.gibbs <- file.path(dest,'quant-salmon-gibbs')
-    
+
     message('Quantifying reads with Salmon (with bootstrap resampling)...')
     dir.create(dir.salmon.boot,recursive = TRUE,showWarnings = FALSE)
     runSalmon(bin = bin.salmon,
@@ -403,7 +403,7 @@ quantifyReads <- function(targets,
               options = opts.salmon.boot,
               targets = df.targets,
               dest = dir.salmon.boot)
-    
+
     message('Quantifying reads with Salmon (with Gibbs resampling)...')
     dir.create(dir.salmon.gibbs,recursive = TRUE,showWarnings = FALSE)
     runSalmon(bin = bin.salmon,
@@ -412,6 +412,6 @@ quantifyReads <- function(targets,
               targets = df.targets,
               dest = dir.salmon.gibbs)
   }
-  
+
   message('Quantification completed!')
 }
