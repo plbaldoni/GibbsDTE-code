@@ -345,26 +345,84 @@ summarizeOverdispersion <- function(path, genome, len, fc, read, tx.per.gene,
   return(out)
 }
 
+computeROCCurve <- function(x,simulation,features,seq.fdr){
+  truth.DE <- simulation[Genome == x$Genome & Length == x$Length & FC == x$FC &
+                           Reads == x$Reads &
+                           Scenario == x$Scenario & LibsPerGroup == x$LibsPerGroup &
+                           Simulation == x$Simulation, c('TranscriptID','status')]
+
+  tb.DE <- merge(features,truth.DE,by = 'TranscriptID',all.x = TRUE)
+  tb.DE[is.na(status),status := 0]
+  tb.DE[, status := abs(status)]
+
+  feature.DE <- data.table(TranscriptID = x$TranscriptID,FDR = x$FDR)
+
+  tb.DE <- merge(tb.DE,feature.DE,by = 'TranscriptID',all.x = TRUE)
+  tb.DE[,call := 0]
+  tb.DE$status <- factor(tb.DE$status,levels = c(0,1))
+  tb.DE$call <- factor(tb.DE$call,levels = c(0,1))
+  tb.DE[is.na(FDR),FDR := 1]
+
+  out <- lapply(seq.fdr,function(w){
+    tb.results <- copy(tb.DE)
+    tb.results[FDR < w/100, call := "1"]
+    tb.results <- tb.results[,table(status,call)]
+    return(c('TPR' = tb.results[2,2]/sum(tb.results[2,]),'FDR' = tb.results[1,2]/sum(tb.results[,2])))
+  })
+
+  out.tpr <- lapply(out,function(x){x['TPR']})
+  out.fdr <- lapply(out,function(x){x['FDR']})
+
+  names(out.tpr) <- paste0('tpr.',seq.fdr)
+  names(out.fdr) <- paste0('fdr.',seq.fdr)
+
+  return(c(out.tpr,out.fdr))
+}
+
+summarizeROCCurve <- function(x,byvar){
+
+  cnames <- colnames(x)
+
+  sub.cnames1 <- cnames[grepl('tpr\\.',cnames)]
+  sub.cnames2 <- cnames[grepl('fdr\\.',cnames)]
+
+  sub.byvar <- byvar[!grepl('Simulation',byvar)]
+
+  x.mean <- x[,lapply(.SD,mean),by = sub.byvar,.SDcols = c(sub.cnames1,sub.cnames2)]
+
+  table1 <- melt(data = x.mean,id.vars = sub.byvar,measure.vars = sub.cnames1,variable.name = 'nFDR',value.name = 'oTPR')
+  table2 <- melt(data = x.mean,id.vars = sub.byvar,measure.vars = sub.cnames2,variable.name = 'nFDR',value.name = 'oFDR')
+
+  table1$nFDR <- as.numeric(gsub("tpr.","",table1$nFDR))/100
+  table2$nFDR <- as.numeric(gsub("fdr.","",table2$nFDR))/100
+
+  table <- merge(table1,table2,by = c(sub.byvar,'nFDR'),all.x = TRUE)
+
+  return(table)
+}
+
 #' @importFrom data.table fwrite
 summarizeQuantification <- function(path,dest,genome,fc,read,len,
                                     tx.per.gene,scenario,libs.per.group,quantifier,
-                                    nsim = 20, fdr = 0.05, seq.n = seq(100,3000,100),alpha = fdr){
+                                    nsim = 20, fdr = 0.05, seq.n = seq(100,3000,100),seq.fdr = c(1,5,10,15,20),alpha = fdr){
 
   byvar <- c('Genome','Length','FC','Reads','TxPerGene','Scenario','LibsPerGroup','Quantifier','Method','Simulation')
 
   res <- aggregateScenario(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim)
-  
+
   table.metrics <- res$results[,computeMetrics(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = fdr,alpha = alpha),by = byvar]
   table.fdr <- res$results[,computeFDRCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = fdr,seq.n = seq.n),by = byvar]
   table.overdispersion <- summarizeOverdispersion(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim)
-
+  table.roc <- res$results[,computeROCCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,seq.fdr = seq.fdr),by = byvar]
+  
   out <- list('fdr' = summarizeFDRCurve(table.fdr,byvar),
               'metrics' = summarizeMetrics(table.metrics,byvar),
               'time' = summarizeTime(res$time,byvar),
               'quantile' = summarizeQQ(res$results,byvar),
               'pvalue' = summarizePValue(res$results,byvar),
               'overdispersion' = table.overdispersion,
-              'quanttime' = res$quanttime)
+              'quanttime' = res$quanttime,
+              'roc' = summarizeROCCurve(table.roc,byvar))
 
   # plotFDRCurve(out$fdr,max.n = max(seq.n))
   # plotPowerBars(out$metrics,fdr,max.n)
@@ -382,7 +440,7 @@ summarizeQuantification <- function(path,dest,genome,fc,read,len,
 summarizeScenario <- function(x,table,path,dest){
   dt <- as.character(table[x,])
   names(dt) <- colnames(table)
-  table.names = c('fdr','metrics','time','quantile','pvalue','overdispersion','quanttime')
+  table.names = c('fdr','metrics','time','quantile','pvalue','overdispersion','quanttime','roc')
 
   in.path <- file.path(path,do.call(file.path,as.list(dt)))
   out.path <- file.path(dest,do.call(file.path,as.list(dt)))
