@@ -85,7 +85,7 @@ loadQuantResults <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.p
       } else{
         i <- c(grep("Optimizing over",df.x) + 1L,grep("Finished Bootstrapping",df.x))
       }
-      time <- strsplit2(df.x[i]," |]|\\.")[,2] |> as.POSIXct(x = _,format="%H:%M:%S")
+      time <- strsplit2(df.x[i],"\\[|\\]")[,2] |> as.POSIXlt(x = _)
       out <- as.numeric(difftime(time[2],time[1],units = 'sec'))
       return(out)
     })
@@ -414,7 +414,7 @@ summarizeQuantification <- function(path,dest,genome,fc,read,len,
   table.fdr <- res$results[,computeFDRCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = fdr,seq.n = seq.n),by = byvar]
   table.overdispersion <- summarizeOverdispersion(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim)
   table.roc <- res$results[,computeROCCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,seq.fdr = seq.fdr),by = byvar]
-  
+
   out <- list('fdr' = summarizeFDRCurve(table.fdr,byvar),
               'metrics' = summarizeMetrics(table.metrics,byvar),
               'time' = summarizeTime(res$time,byvar),
