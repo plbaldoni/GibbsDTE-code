@@ -25,7 +25,7 @@ for (genome in c('mm39')) {
                                   paste0('simulation-',simulation))
                 dir.create(dest,recursive = TRUE,showWarnings = FALSE)
 
-                if (!length(list.files(dest, 'time.tsv', recursive = TRUE)) == 2) {
+                if (!length(list.files(dest, 'time.tsv', recursive = TRUE)) == 6) {
                   dt <- data.table(dest = dest,
                                    genome = genome,
                                    rlen = len,
