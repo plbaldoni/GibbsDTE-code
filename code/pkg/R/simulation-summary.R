@@ -68,12 +68,19 @@ loadQuantResults <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.p
 
   libsgroup <- as.numeric(gsub("libsPerGroup","",libs.per.group))
   n.libs <- rep(libsgroup,2)
+
+  # Generating sample labels
+  group <- rep(LETTERS[seq_len(length(n.libs))],times = n.libs)
+  rep <- unlist(lapply(n.libs,seq_len))
+  group.name <- paste0(paste(paste0('group', group), paste0('rep',rep), sep = '_'),"_R1")
+
   if (scenario == 'balanced') {
     lib.sizes <- rep(50e6,sum(n.libs))
   } else{
     lib.sizes <- rep(rep(c(25e6,100e6),length.out = libsgroup),2)
   }
-  dt.time$LibSize <- lib.sizes
+  names(lib.sizes) <- group.name
+  dt.time$LibSize <- lib.sizes[match(dt.time$Sample,names(lib.sizes))]
 
   # Getting time spend during bootstrapping/Gibbs resampling
   if (grepl('salmon',quantifier)){
@@ -131,16 +138,22 @@ aggregateScenario <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.
 
   ls.quant <- lapply(seq_len(nsim),function(x){
     res.path <- file.path(path,subpath[x],paste0('quant-',quantifier))
+    message("Reading simulations from:")
+    message(res.path)
     loadQuantResults(res.path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,x,quantifier)
   })
 
   ls.results <- lapply(seq_len(nsim),function(x){
     res.path <- file.path(path,subpath[x],paste0('dte-',quantifier))
+    message("Reading simulations from:")
+    message(res.path)
     loadResults(res.path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,x,quantifier)
   })
 
   ls.metadata <- lapply(seq_len(nsim),function(x){
     meta.path <- file.path(path,subpath[x],'meta')
+    message("Reading simulations from:")
+    message(meta.path)
     loadMetadata(meta.path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,x)
   })
 
@@ -447,6 +460,8 @@ summarizeScenario <- function(x,table,path,dest){
 
   # Check is simulation directory exists
   if (!dir.exists(in.path)) return(invisible())
+  message("Reading simulations from:")
+  message(in.path)
 
   # Summarizing results with Salmon (bootstrap)
   if (!all(file.exists(file.path(out.path,'dte-salmon',paste0(table.names,'.tsv.gz'))))){
@@ -487,14 +502,11 @@ summarizeSimulation <- function(path,
                                 read = c('single-end','paired-end'),
                                 tx.per.gene = c(2,3,4,5,9999),
                                 scenario = c('balanced','unbalanced'),
-                                libs.per.group = c(3,5,10), workers = 1){
+                                libs.per.group = c(3,5,10),...){
 
   path <- normalizePath(path)
   dir.create(dest,showWarnings = FALSE,recursive = TRUE)
   dest <- normalizePath(dest)
-
-  BPPARAM <- MulticoreParam(workers = workers,progressbar = TRUE)
-  register(BPPARAM)
 
   dt.scenario <- expand.grid('genome' = genome,
                              'len' = paste0('readlen-',len),
@@ -505,7 +517,7 @@ summarizeSimulation <- function(path,
                              'libs.per.group' = paste0(libs.per.group,'libsPerGroup'),
                              stringsAsFactors = FALSE)
 
-  bplapply(seq_len(nrow(dt.scenario)),summarizeScenario,table = dt.scenario,dest = dest,path = path,BPPARAM = BPPARAM)
+  bplapply(seq_len(nrow(dt.scenario)),summarizeScenario,table = dt.scenario,dest = dest,path = path,...)
 
   return(invisible())
 }
