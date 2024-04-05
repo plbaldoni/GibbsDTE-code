@@ -1,0 +1,45 @@
+---
+title: "Pre-processing the human lung cancer cell lines dataset"
+author: "Pedro L. Baldoni"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+Our case study is based on the paired-end Illumina short read RNA-seq experiment from the human lung cancer cell lines H1975 and HCC827 ([GSE172421](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE172421)).
+
+All the RNA-seq experiments were quantified with [Salmon](https://salmon.readthedocs.io/) version v1.10.0 using an decoy-aware indexed transcriptome based on the Ensembl-oriented Gencode annotation version 33 (Ensembl annotation version 99) with added transcripts from spiked-in [sequins](https://doi.org/10.1038/s41592-023-02026-3). We also quantified the RNA-seq experiments with [kallisto](https://pachterlab.github.io/kallisto) version v0.46.1 using an indexed transcriptome based on the Gencode annotation version 33 to assess the consistency of RTA overdispersion estimates in *edgeR*. To generate coverage plots, we have aligned RNA-seq experiments to the *hg38* reference genome with added spiked-in *sequins* genome with [Subread](https://subread.sourceforge.net/).
+
+# Acessing the necessary annotation
+
+Download the Gencode annotation version 33 (Ensembl annotation version 99) from [this link](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_33/) and place files in the directory `./data/annotation/hg38`. Files can be downloaded with the following command line:
+`wget -r -nd ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_33/*`
+
+The *sequins* annotation is located in the directory `./data/annotation/sequins` of the GitHub repository of this page. They were originally obtained from [this repo](https://github.com/XueyiDong/LongReadRNA/tree/master/sequins/annotations).
+
+The RefSeq gene annotation used by `Subread` during alignment is located in the directory `./data/annotation/hg38` of the GitHub repository of this page. This annotation was  originally obtained from the curated [annotation database](https://bioinf.wehi.edu.au/Rsubread/annot/index.html) for *Rsubread* that is actively maintained by WEHI Bioinformatics.
+
+# Creating the reference genome and transcriptome
+
+1. Run the script `code/lung/index/combineAnnotation.sh` to combine the Gencode annotation with the sequins annotation. This script uses the *picard-tools* module.
+
+2. Run the script `code/lung/index/buildIndex.sh` to build *Salmon*'s transcriptome index. This script uses the following modules: *Salmon*, *MashMap*, *bedtools* and the [generateDecoyTranscriptome.sh](https://github.com/COMBINE-lab/SalmonTools/blob/master/scripts/generateDecoyTranscriptome.sh) script.
+
+3. Run the script `code/lung/index/index-kallisto/slurm.sh` to build *kallisto*'s transcriptome index.
+
+4. Run the script `code/lung/index-subread` to build the *Subread* index. This script uses the combined reference genome created in step 1.
+
+# Downloading, quantifying, and aligning the Illumina paired-end short read experiments
+
+1. Run `./code/lung/data/runAspera.sh` to download all necessary FASTQ files. This script uses the module *aspera*.
+
+2. Run `./code/lung/salmon/runSalmon.sh` to quantify the RNA-seq reads with *Salmon*.
+
+3. Run `./code/lung/salmon/runWasabi.R` to generate `.h5` files from *Salmon*'s output that can be read by the DTE method *sleuth*.
+
+4. Run the script `./code/lung/kallisto/runKallisto.sh` to quantify the RNA-seq reads with *kallisto*.
+
+5. Run the script `./code/lung/subread/slurm.sh` to align the RNA-seq samples with *Subread*.
+
+The targets file for this experiment is provided in our GitHub repository for convenience. See file `./data/lung/misc/targets.txt`.

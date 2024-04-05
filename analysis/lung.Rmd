@@ -1,0 +1,1360 @@
+---
+title: "Analysis of the human lung cancer cell lines dataset"
+author: "Pedro L. Baldoni"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: inline
+---
+
+# Introduction
+
+## Setup
+
+```{r lung_intro_setup_options}
+knitr::opts_chunk$set(dev = "png",
+                      dpi = 300,
+                      dev.args = list(type = "cairo-png"),
+                      root.dir = '.',
+                      autodep = TRUE)
+
+options(knitr.kable.NA = "-")
+```
+
+```{r lung_intro_setup_lib,message=FALSE,warning=FALSE}
+library(knitr)
+library(data.table)
+library(ComplexHeatmap)
+library(AnnotationHub)
+library(ggplot2)
+library(ggupset)
+library(edgeR)
+library(patchwork)
+library(rtracklayer)
+library(magrittr)
+library(Gviz)
+library(png)
+library(csaw)
+library(lubridate)
+library(BiocParallel)
+devtools::load_all('../code/pkg')
+```
+
+```{r lung_intro_setup_paths}
+path.misc <- file.path('../misc/lung.Rmd')
+dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
+
+path.lung <- "../output/lung"
+path.bam <- '../output/lung/subread/alignment'
+path.sim <- 
+  file.path('../output/simulation/data/mm39/readlen-100/fc2',
+            'paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1/')
+```
+
+```{r lung_parameters}
+bs <- 8
+bseq <- seq(10,100,10)
+BPPARAM <- BiocParallel::MulticoreParam(workers = 10,progressbar = TRUE)
+register(BPPARAM)
+```
+
+## Data loading
+
+```{r lung_anno}
+ah <- AnnotationHub()
+edb <- ah[['AH78783']] # Ensembl version 99 relative to Gencode version 33
+edb.names <- c("TXIDVERSION","SYMBOL","TXBIOTYPE",
+               "GENEIDVERSION","GENENAME","GENEBIOTYPE","ENTREZID")
+
+dt.anno <- as.data.table(select(edb,keys(edb),edb.names))
+
+dt.anno.gene <- 
+  dt.anno[,.(NTranscriptPerGene = .N),
+          by = c('GENEIDVERSION','GENEBIOTYPE','ENTREZID','GENENAME')]
+
+dt.anno.gene[,GeneOfInterest := 
+               GENEBIOTYPE %in% c('protein_coding','lncRNA') & !is.na(ENTREZID)]
+```
+
+```{r lung_gtf}
+gr <- import("../data/annotation/hg38/gencode.v33.annotation.gtf.gz")
+gr$EntrezID <- dt.anno$ENTREZID[match(gr$transcript_id,dt.anno$TXIDVERSION)]
+gr.tx <- gr[gr$type == 'transcript']
+```
+
+```{r lung_quant_gibbs}
+cs.gibbs <- 
+  catchSalmon(list.dirs(file.path(path.lung,'salmon-gibbs'),recursive = FALSE))
+
+cs.gibbs$counts <- 
+  cs.gibbs$counts[grepl("ENST",rownames(cs.gibbs$counts)),]
+cs.gibbs$annotation <- 
+  cs.gibbs$annotation[grepl("ENST",rownames(cs.gibbs$annotation)),]
+rownames(cs.gibbs$counts) <- 
+  rownames(cs.gibbs$annotation) <- strsplit2(rownames(cs.gibbs$counts),"\\|")[,1]
+colnames(cs.gibbs$counts) <- basename(colnames(cs.gibbs$counts))
+cs.gibbs$annotation$TranscriptSymbol <- 
+  gr.tx$transcript_name[match(rownames(cs.gibbs$annotation),gr.tx$transcript_id)]
+cs.gibbs$annotation$EntrezID <- 
+  dt.anno$ENTREZID[match(rownames(cs.gibbs$annotation),dt.anno$TXIDVERSION)]
+cs.gibbs$annotation$GeneID <- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.gibbs$annotation),dt.anno$TXIDVERSION)]
+cs.gibbs$annotation$GeneOfInterest <- 
+  dt.anno.gene$GeneOfInterest[match(cs.gibbs$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
+```
+
+```{r lung_quant_boot}
+cs.boot <- 
+  catchSalmon(list.dirs(file.path(path.lung,'salmon-bootstrap/'),recursive = FALSE))
+
+cs.boot$counts <- cs.boot$counts[grepl("ENST",rownames(cs.boot$counts)),]
+cs.boot$annotation <- 
+  cs.boot$annotation[grepl("ENST",rownames(cs.boot$annotation)),]
+rownames(cs.boot$counts) <- 
+  rownames(cs.boot$annotation) <- strsplit2(rownames(cs.boot$counts),"\\|")[,1]
+colnames(cs.boot$counts) <- 
+  basename(colnames(cs.boot$counts))
+cs.boot$annotation$TranscriptSymbol <- 
+  gr.tx$transcript_name[match(rownames(cs.boot$annotation),gr.tx$transcript_id)]
+cs.boot$annotation$EntrezID <- 
+  dt.anno$ENTREZID[match(rownames(cs.boot$annotation),dt.anno$TXIDVERSION)]
+cs.boot$annotation$GeneID <- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.boot$annotation),dt.anno$TXIDVERSION)]
+cs.boot$annotation$GeneOfInterest <- 
+  dt.anno.gene$GeneOfInterest[match(cs.boot$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
+```
+
+```{r lung_kallisto_quant_boot}
+cs.kallisto <- 
+  catchKallisto(list.dirs(file.path(path.lung,'kallisto/'),recursive = FALSE))
+
+cs.kallisto$counts <- cs.kallisto$counts[grepl("ENST",rownames(cs.kallisto$counts)),]
+cs.kallisto$annotation <- 
+  cs.kallisto$annotation[grepl("ENST",rownames(cs.kallisto$annotation)),]
+rownames(cs.kallisto$counts) <- 
+  rownames(cs.kallisto$annotation) <- strsplit2(rownames(cs.kallisto$counts),"\\|")[,1]
+colnames(cs.kallisto$counts) <- 
+  basename(colnames(cs.kallisto$counts))
+cs.kallisto$annotation$TranscriptSymbol <- 
+  gr.tx$transcript_name[match(rownames(cs.kallisto$annotation),gr.tx$transcript_id)]
+cs.kallisto$annotation$EntrezID <- 
+  dt.anno$ENTREZID[match(rownames(cs.kallisto$annotation),dt.anno$TXIDVERSION)]
+cs.kallisto$annotation$GeneID <- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.kallisto$annotation),dt.anno$TXIDVERSION)]
+cs.kallisto$annotation$GeneOfInterest <- 
+  dt.anno.gene$GeneOfInterest[match(cs.kallisto$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
+
+cs.kallisto$counts <- cs.kallisto$counts[match(rownames(cs.gibbs$counts),rownames(cs.kallisto$counts)),]
+cs.kallisto$annotation <- cs.kallisto$annotation[match(rownames(cs.gibbs$annotation),rownames(cs.kallisto$annotation)),]
+```
+
+```{r lung_targets}
+targets <- read.delim('../data/lung/misc/targets.txt')
+targets$GSM <- strsplit2(targets$File1,"_")[,1]
+targets <- targets[match(basename(colnames(cs.gibbs$counts)),targets$GSM),]
+```
+
+```{r lung_dgelist}
+dte.raw <- DGEList(counts = cs.gibbs$counts,
+                   samples = targets,
+                   genes = cs.gibbs$annotation)
+dte.raw$samples$group <- dte.raw$samples$Group
+
+dte.gibbs <- DGEList(counts = cs.gibbs$counts/cs.gibbs$annotation$Overdispersion,
+                     samples = targets,
+                     genes = cs.gibbs$annotation)
+dte.gibbs$samples$group <- dte.gibbs$samples$Group
+
+
+dte.boot <- DGEList(counts = cs.boot$counts/cs.boot$annotation$Overdispersion,
+                    samples = targets,
+                    genes = cs.boot$annotation)
+dte.boot$samples$group <- dte.boot$samples$Group
+
+dte.kallisto <- DGEList(counts = cs.kallisto$counts/cs.kallisto$annotation$Overdispersion,
+                        samples = targets,
+                        genes = cs.kallisto$annotation)
+dte.kallisto$samples$group <- dte.kallisto$samples$Group
+```
+
+```{r lung_salmon_log}
+log.salmon <- readLines('../code/lung/salmon/slurm-15887027.out')
+log.salmon.boot <- log.salmon[grepl("Timestamp Bootstrap",log.salmon)] %>% 
+  strsplit2(.," ") %>%
+  as.data.table()
+log.salmon.gibbs <- log.salmon[grepl("Timestamp Gibbs",log.salmon)] %>% 
+  strsplit2(.," ") %>%
+  as.data.table()
+
+log.salmon.boot[,Diff := dmy_hms(paste(gsub("/","-",V8),V9)) - dmy_hms(paste(gsub("/","-",V5),V6))]
+
+log.salmon.gibbs[,Diff := dmy_hms(paste(gsub("/","-",V8),V9)) - dmy_hms(paste(gsub("/","-",V5),V6))]
+
+log.salmon.boot$Diff
+log.salmon.gibbs$Diff
+
+mean(log.salmon.boot$Diff)
+mean(log.salmon.gibbs$Diff)
+```
+
+```{r lung_kallisto_log}
+log.kallisto <- readLines('../code/lung/kallisto/slurm-16121443.out')
+log.kallisto.boot <- log.kallisto[grepl("Timestamp Bootstrap",log.kallisto)] %>% 
+  strsplit2(.," ") %>%
+  as.data.table()
+
+log.kallisto.boot[,Diff := dmy_hms(paste(gsub("/","-",V8),V9)) - dmy_hms(paste(gsub("/","-",V5),V6))]
+
+log.kallisto.boot$Diff
+
+mean(log.kallisto.boot$Diff)
+```
+
+# Data analysis
+
+## Filtering
+
+```{r lung_filtering}
+keep.raw <- 
+  filterByExpr(dte.raw) & 
+  (dte.raw$genes$GeneOfInterest == TRUE)
+
+keep.gibbs <- 
+  filterByExpr(dte.gibbs) & 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+keep.boot <- 
+  filterByExpr(dte.boot) & 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+keep.kallisto <- 
+  filterByExpr(dte.kallisto) & 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+table(keep.gibbs,keep.boot)
+table(keep.gibbs,keep.kallisto)
+
+dte.gibbs$genes$inBoot <- keep.boot
+dte.boot$genes$inGibbs <- keep.gibbs
+dte.kallisto$genes$inGibbs <- keep.gibbs
+
+dte.raw.filtr <- dte.raw[keep.raw,,keep.lib.sizes = FALSE]
+dte.gibbs.filtr <- dte.gibbs[keep.gibbs,,keep.lib.sizes = FALSE]
+dte.boot.filtr <- dte.boot[keep.boot,,keep.lib.sizes = FALSE]
+dte.kallisto.filtr <- dte.kallisto[keep.kallisto,,keep.lib.sizes = FALSE]
+```
+
+## Normalization
+
+```{r lung_norm}
+dte.raw.filtr <- normLibSizes(dte.raw.filtr)
+dte.raw.filtr$samples$norm.factors
+
+dte.gibbs.filtr <- normLibSizes(dte.gibbs.filtr)
+dte.gibbs.filtr$samples$norm.factors
+
+dte.boot.filtr <- normLibSizes(dte.boot.filtr)
+dte.boot.filtr$samples$norm.factors
+
+dte.kallisto.filtr <- normLibSizes(dte.kallisto.filtr)
+dte.kallisto.filtr$samples$norm.factors
+```
+
+## Comparison of Bootstrap- and Gibbs-based RTA
+
+```{r lung_boot_vs_gibbs}
+isExpr <- rowSums(dte.gibbs$counts) > 0
+
+dt.scatter <- data.table(TranscriptID = rownames(dte.gibbs)[isExpr],
+                         TranscriptSymbol = dte.gibbs$genes$TranscriptSymbol[isExpr],
+                         EntrezID = dte.gibbs$genes$EntrezID[isExpr],
+                         GeneID = dte.gibbs$genes$GeneID[isExpr],
+                         Kallisto.Bootstrap = dte.kallisto$genes$Overdispersion[isExpr],
+                         Salmon.Bootstrap = dte.boot$genes$Overdispersion[isExpr],
+                         Salmon.Gibbs = dte.gibbs$genes$Overdispersion[isExpr],
+                         Expr.Kallisto.Boot = aveLogCPM(dte.kallisto[isExpr,]),
+                         Expr.Salmon.Boot = aveLogCPM(dte.boot[isExpr,]),
+                         Expr.Salmon.Gibbs = aveLogCPM(dte.gibbs[isExpr,]))
+
+dt.scatter[,NTx := .N,by = 'GeneID']
+
+dt.scatter <- dt.scatter[grepl("ENST",TranscriptID),]
+
+dt.scatter[,gibbs.salmon.boot.fit := .(loessFit(x = log2(Salmon.Bootstrap),
+                                                y = log2(Salmon.Gibbs))$fitted)]
+
+dt.scatter[,fc.expr.salmon.fit := .(loessFit(x = Expr.Salmon.Gibbs,
+                                             y = log2(Salmon.Bootstrap/Salmon.Gibbs))$fitted)]
+
+dt.scatter[,gibbs.kallisto.boot.fit := .(loessFit(x = log2(Kallisto.Bootstrap),
+                                                  y = log2(Salmon.Gibbs))$fitted)]
+
+dt.scatter[,fc.expr.kallisto.fit := .(loessFit(x = Expr.Salmon.Gibbs,
+                                               y = log2(Kallisto.Bootstrap/Salmon.Gibbs))$fitted)]
+```
+
+```{r lung_boot_vs_gibbs_salmon,fig.width = 3,fig.height = 3}
+fig.scatter.salmon <- ggplot(data = dt.scatter,aes(x = log2(Salmon.Bootstrap))) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
+  geom_line(aes(y = gibbs.salmon.boot.fit),linewidth = 0.5,color = '#3366FF') +
+  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed',linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(x = 'Bootstrap RTA (log2 scale)',y = 'Gibbs RTA (log2 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.rtama.salmon <- 
+  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Bootstrap/Salmon.Gibbs))) +
+  geom_line(aes(y = fc.expr.salmon.fit),linewidth = 0.5,color = '#3366FF') +
+  geom_abline(intercept = 0,slope = 0,color = 'red',linetype = 'dashed',linewidth = 0.5) +
+  scale_y_continuous(limits = c(-5.5,5.5)) +
+  labs(x = 'Average log2 CPM',y = 'RTA log2 fold-change')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.salmon
+fig.rtama.salmon
+```
+
+```{r lung_boot_vs_gibbs_kallisto,fig.width = 3,fig.height = 3}
+fig.scatter.kallisto <- ggplot(data = dt.scatter,aes(x = log2(Kallisto.Bootstrap))) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
+  geom_line(aes(y = gibbs.kallisto.boot.fit),linewidth = 0.5,color = '#3366FF') +
+  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed',linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(x = 'Bootstrap RTA (log2 scale)',y = 'Gibbs RTA (log2 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.rtama.kallisto <- 
+  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
+  geom_point(alpha = 0.05,aes(y = log2(Kallisto.Bootstrap/Salmon.Gibbs))) +
+  geom_line(aes(y = fc.expr.kallisto.fit),linewidth = 0.5,color = '#3366FF') +
+  geom_abline(intercept = 0,slope = 0,color = 'red',linetype = 'dashed',linewidth = 0.5) +
+  scale_y_continuous(limits = c(-7,7)) +
+  labs(x = 'Average log2 CPM',y = 'RTA log2 fold-change')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.kallisto
+fig.rtama.kallisto
+```
+
+```{r lung_boot_vs_gibbs_summary}
+dt.scatter[,summary(Kallisto.Bootstrap/Salmon.Gibbs)]
+dt.scatter[,summary(Salmon.Bootstrap/Salmon.Gibbs)]
+
+dt.scatter[,table(Expr.Salmon.Gibbs <= 1)]
+dt.scatter[,table(Expr.Salmon.Gibbs <= 1)/.N]
+
+dt.scatter[Expr.Salmon.Gibbs <= 1,summary(Kallisto.Bootstrap/Salmon.Gibbs)]
+dt.scatter[Expr.Salmon.Gibbs <= 1,summary(Salmon.Bootstrap/Salmon.Gibbs)]
+
+dt.scatter[Expr.Salmon.Gibbs >1,summary(Kallisto.Bootstrap/Salmon.Gibbs)]
+dt.scatter[Expr.Salmon.Gibbs >1,summary(Salmon.Bootstrap/Salmon.Gibbs)]
+```
+
+## Assessing convergence of RTA estimates
+
+```{r lung_avelogcpm}
+alcpm <- dt.scatter$Expr.Salmon.Gibbs
+names(alcpm) <- dt.scatter$TranscriptID
+
+alcpm.cut <- cut(alcpm,breaks = c(-Inf, 1, Inf),
+                 labels = c("Avg. Log CPM <= 1", "Avg. Log CPM > 1"))
+names(alcpm.cut) <- names(alcpm)
+```
+
+```{r lung_conv}
+foo <- function(b){
+  cs.kallisto <- 
+    catchKallisto2(paths = list.dirs(file.path(path.lung,'kallisto'),recursive = FALSE),
+                   nboot.max = b)
+  cs.boot <- 
+    catchSalmon2(paths = list.dirs(file.path(path.lung,'salmon-bootstrap'),recursive = FALSE),
+                 nboot.max = b)
+  cs.gibbs <- 
+    catchSalmon2(paths = list.dirs(file.path(path.lung,'salmon-gibbs'),recursive = FALSE),
+                 nboot.max = b)
+  
+  rownames(cs.kallisto$annotation) <- strsplit2(rownames(cs.kallisto$annotation),"\\|")[,1]
+  rownames(cs.boot$annotation) <- strsplit2(rownames(cs.boot$annotation),"\\|")[,1]
+  rownames(cs.gibbs$annotation) <- strsplit2(rownames(cs.gibbs$annotation),"\\|")[,1]
+  
+  cs.kallisto$annotation <- cs.kallisto$annotation[match(rownames(cs.gibbs$annotation),rownames(cs.kallisto$annotation)),]
+  cs.kallisto$counts <- cs.kallisto$counts[match(rownames(cs.gibbs$counts),rownames(cs.kallisto$counts)),]
+  
+  stopifnot(all.equal(rownames(cs.kallisto$annotation),rownames(cs.gibbs$annotation)))
+  stopifnot(all.equal(rownames(cs.boot$annotation),rownames(cs.gibbs$annotation)))
+  
+  IsExpressed <- (rowSums(cs.gibbs$counts) > 0)
+  rn <- rownames(cs.gibbs$annotation)[IsExpressed]
+  
+  rta <- data.table(ResamplingNum = b,
+                    AveLogCPM = alcpm.cut[match(rn,names(alcpm.cut))],
+                    TranscriptID = rn,
+                    Kallisto.Boot = cs.kallisto$annotation$Overdispersion[IsExpressed],
+                    Salmon.Boot = cs.boot$annotation$Overdispersion[IsExpressed],
+                    Salmon.Gibbs = cs.gibbs$annotation$Overdispersion[IsExpressed])
+  
+  rta <- rta[grepl("ENST",TranscriptID),]
+  
+  return(rta)
+}
+
+rta.out <- bplapply(bseq,foo,BPPARAM = BPPARAM)
+df.rta <- rbindlist(rta.out)
+```
+
+```{r lung_conv_df}
+df.rta.reference <- df.rta[ResamplingNum == 100,c('TranscriptID','Kallisto.Boot','Salmon.Boot','Salmon.Gibbs')]
+setnames(df.rta.reference,
+         old = c('Kallisto.Boot','Salmon.Boot','Salmon.Gibbs'),
+         new = c('Ref.Kallisto.Bootstrap','Ref.Salmon.Bootstrap','Ref.Salmon.Gibbs'))
+
+df.rta <- merge(df.rta,df.rta.reference,all.x = TRUE,sort = FALSE,by = c('TranscriptID'))
+df.rta$Kallisto.Bootstrap <- df.rta$Kallisto.Boot/df.rta$Ref.Kallisto.Bootstrap
+df.rta$Salmon.Bootstrap <- df.rta$Salmon.Boot/df.rta$Ref.Salmon.Bootstrap
+df.rta$Salmon.Gibbs <- df.rta$Salmon.Gibbs/df.rta$Ref.Salmon.Gibbs
+
+df.rta.melt <- melt(df.rta,
+                    id.vars = c('TranscriptID','ResamplingNum','AveLogCPM'),
+                    measure.vars = c('Kallisto.Bootstrap','Salmon.Bootstrap','Salmon.Gibbs'),
+                    value.name = 'Overdispersion',
+                    variable.name = 'Type')
+
+df.rta.melt$Type %<>% factor(levels = c('Kallisto.Bootstrap','Salmon.Bootstrap','Salmon.Gibbs'),
+                             labels = c('kallisto-Bootstrap','Salmon-Bootstrap','Salmon-Gibbs'))
+df.rta.melt$AveLogCPM %<>%
+  factor(levels = levels(.),labels = c("Average log2 CPM \u2264 1","Average log2 CPM > 1"))
+```
+
+```{r lung_conv_df_salmon,fig.height=5,fig.width=5.5}
+df.rta.melt.salmon  <- df.rta.melt[Type != 'kallisto-Bootstrap',]
+df.rta.melt.salmon$Type %<>%
+  droplevels() %<>%
+  factor(levels = levels(.),labels = c('Bootstrap','Gibbs'))
+
+fig.resampling.salmon <- 
+  ggplot(data = df.rta.melt.salmon,
+         aes(x = ResamplingNum,y = log2(Overdispersion))) +
+  facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
+  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_hline(yintercept = c(0),color = 'red',linetype = 'dashed',linewidth = 0.5) +
+  scale_x_continuous(breaks = seq(10,100,10)) +
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = 'Number of resamples', y = 'RTA log2 fold-change',color = NULL,fill = NULL)
+fig.resampling.salmon
+```
+
+```{r lung_conv_df_kallisto,fig.height=5,fig.width=5.5}
+df.rta.melt.kallisto  <- df.rta.melt[Type != 'Salmon-Bootstrap',]
+df.rta.melt.kallisto$Type %<>%
+  droplevels() %<>%
+  factor(levels = levels(.),labels = c('Bootstrap','Gibbs'))
+
+fig.resampling.kallisto <- 
+  ggplot(data = df.rta.melt.kallisto[Type != 'Salmon-Bootstrap',],
+         aes(x = ResamplingNum,y = log2(Overdispersion))) +
+  facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
+  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_hline(yintercept = c(0),color = 'red',linetype = 'dashed',linewidth = 0.5) +
+  scale_x_continuous(breaks = seq(10,100,10)) +
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = 'Number of resamples', y = 'RTA log2 fold-change',color = NULL,fill = NULL)
+fig.resampling.kallisto
+```
+
+## Differential transcript expression
+
+```{r lung_dte}
+design <- model.matrix(~group,data = dte.boot$samples)
+
+dte.raw.filtr.legacy <- estimateDisp(dte.raw.filtr,design = design)
+dte.boot.filtr.legacy <- estimateDisp(dte.boot.filtr,design = design)
+dte.gibbs.filtr.legacy <- estimateDisp(dte.gibbs.filtr,design = design)
+
+fit.boot.edgeR.legacy <- glmQLFit(dte.boot.filtr.legacy,design = design,legacy = TRUE)
+fit.gibbs.edgeR.legacy <- glmQLFit(dte.gibbs.filtr.legacy,design = design,legacy = TRUE)
+fit.boot.edgeR.v4 <- glmQLFit(dte.boot.filtr,design,legacy = FALSE)
+fit.gibbs.edgeR.v4 <- glmQLFit(dte.gibbs.filtr,design,legacy = FALSE)
+
+qlf.boot.edgeR.legacy <- glmQLFTest(fit.boot.edgeR.legacy,coef = 2)
+qlf.gibbs.edgeR.legacy <- glmQLFTest(fit.gibbs.edgeR.legacy,coef = 2)
+qlf.boot.edgeR.v4 <- glmQLFTest(fit.boot.edgeR.v4,coef = 2)
+qlf.gibbs.edgeR.v4 <- glmQLFTest(fit.gibbs.edgeR.v4,coef = 2)
+
+out.boot.edgeR.legacy <- topTags(qlf.boot.edgeR.legacy,n = Inf)
+out.gibbs.edgeR.legacy <- topTags(qlf.gibbs.edgeR.legacy,n = Inf)
+out.boot.edgeR.v4 <- topTags(qlf.boot.edgeR.v4,n = Inf)
+out.gibbs.edgeR.v4 <- topTags(qlf.gibbs.edgeR.v4,n = Inf)
+
+dt.boot.edgeR.legacy <- decideTests(qlf.boot.edgeR.legacy)
+dt.gibbs.edgeR.legacy <- decideTests(qlf.gibbs.edgeR.legacy)
+dt.boot.edgeR.v4 <- decideTests(qlf.boot.edgeR.v4)
+dt.gibbs.edgeR.v4 <- decideTests(qlf.gibbs.edgeR.v4)
+```
+
+```{r lung_dte_summary}
+summary(dt.boot.edgeR.legacy)
+summary(dt.gibbs.edgeR.legacy)
+summary(dt.boot.edgeR.v4)
+summary(dt.gibbs.edgeR.v4)
+```
+
+```{r lung_qldisp,fig.height=4,fig.width=5}
+plotQLDisp2 <- function (glmfit, xlab = "Average Log2 CPM", ylab = "Quarter-Root Mean Deviance", pch = 16, cex = 0.2, col.shrunk = "red", col.trend = "blue", col.raw = "black", fontsize = 8,...) 
+{
+  if (is.null(glmfit$var.post)) 
+    stop("need to run glmQLFit before plotQLDisp")
+  A <- glmfit$AveLogCPM
+  if (is.null(A)) 
+    A <- aveLogCPM(glmfit)
+  if (is.null(glmfit$df.residual.zeros)) {
+    df.residual <- glmfit$df.residual.adj
+    deviance <- glmfit$deviance.adj
+  }
+  else {
+    df.residual <- glmfit$df.residual.zeros
+    deviance <- glmfit$deviance
+  }
+  s2 <- deviance/df.residual
+  s2[df.residual < 1e-08] <- 0
+  plot(A, sqrt(sqrt(s2)), xlab = xlab, ylab = ylab, pch = pch, 
+       cex = cex, col = col.raw, cex.lab = fontsize/12,
+       cex.axis = fontsize/12, ...)
+  points(A, sqrt(sqrt(glmfit$var.post)), pch = pch, cex = cex, 
+         col = col.shrunk)
+  if (identical(length(glmfit$var.prior), 1L)) {
+    abline(h = sqrt(sqrt(glmfit$var.prior)), col = col.trend)
+  }
+  else {
+    o <- order(A)
+    lines(A[o], sqrt(sqrt(glmfit$var.prior[o])), col = col.trend, 
+          lwd = 2)
+  }
+  legend("topright", lty = c(-1, -1, 1), pch = c(pch, pch, 
+                                                 -1), col = c(col.raw, col.shrunk, col.trend), pt.cex = 0.7,
+         cex = fontsize/12,
+         lwd = 2, legend = c("Raw", "Squeezed", "Trend"))
+  invisible(list(x = A, y = sqrt(sqrt(s2))))
+}
+
+fig.ql <- wrap_elements(full = ~ plotQLDisp2(qlf.gibbs.edgeR.legacy))
+fig.ql
+
+file.ql <- tempfile("ql",fileext = '.png')
+png(file.ql,width = 5,height = 4,units = 'in',res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.ql
+dev.off()
+
+fig.ql <- readPNG(file.ql, native = TRUE)
+```
+
+## Contrasting DTE between bootstrap and Gibbs pipelines
+
+```{r lung_upset,fig.height=4,fig.width=5}
+dt.dte <- data.table(TranscriptID = rownames(dte.boot)[rownames(dte.boot) %in% gr.tx$transcript_id])
+dt.dte[,edgeR.boot.legacy := TranscriptID %in% rownames(dt.boot.edgeR.legacy)[dt.boot.edgeR.legacy !=0]]
+dt.dte[,edgeR.gibbs.legacy := TranscriptID %in% rownames(dt.gibbs.edgeR.legacy)[dt.gibbs.edgeR.legacy !=0]]
+dt.dte[,edgeR.boot.v4 := TranscriptID %in% rownames(dt.boot.edgeR.v4)[dt.boot.edgeR.v4 !=0]]
+dt.dte[,edgeR.gibbs.v4 := TranscriptID %in% rownames(dt.gibbs.edgeR.v4)[dt.gibbs.edgeR.v4 !=0]]
+
+dt.upset <- dt.dte[,2:5]*1
+colnames(dt.upset) <- c('edgeR-v3 (bootstrap)',
+                        'edgeR-v3 (Gibbs)',
+                        'edgeR-v4 (bootstrap)',
+                        'edgeR-v4 (Gibbs)')
+
+dt.upset$Group <- lapply(1:nrow(dt.upset),function(x){
+  colnames(dt.upset)[which(dt.upset[x,] != 0)]
+})
+
+i <- rowSums(dt.upset[,1:4]) >0 
+
+fig.upset <- ggplot(data = dt.upset[i,],aes(x=Group)) +
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs)) +
+  geom_bar() +
+  geom_text(stat='count',
+            aes(label=after_stat(count)),
+            vjust=-1,size = bs/.pt) +
+  scale_x_upset() +
+  scale_y_continuous(limits = c(0, 20000)) +
+  labs(x = NULL,y = "DE Transcripts")
+
+file.upset <- tempfile("upset",fileext = '.png')
+png(file.upset,width = 5,height = 4,units = 'in',res = 300)
+fig.upset
+dev.off()
+
+fig.upset
+
+fig.upset <- readPNG(file.upset, native = TRUE)
+```
+
+```{r lung_bootonly,fig.width = 3,fig.height = 3}
+tx.gibbsonly <- 
+  dt.dte[edgeR.boot.v4 == FALSE & 
+           edgeR.gibbs.v4 == TRUE,TranscriptID]
+tx.bootonly <- 
+  dt.dte[edgeR.boot.v4 == TRUE & 
+           edgeR.gibbs.v4 == FALSE,TranscriptID]
+
+table(tx.gibbsonly %in% rownames(dte.boot.filtr))
+table(tx.bootonly %in% rownames(dte.gibbs.filtr))
+
+dt.scatter$IsGibbsOnly <- dt.scatter$TranscriptID %in% tx.gibbsonly
+dt.scatter$IsBootOnly <- dt.scatter$TranscriptID %in% tx.bootonly
+
+fig.scatter.gibbs <- ggplot(data = dt.scatter[IsGibbsOnly == FALSE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs))) +
+  geom_point(shape = 19,alpha = 0.1) +
+  geom_point(inherit.aes = FALSE,data = dt.scatter[IsGibbsOnly == TRUE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs)),shape = 19,alpha = 1,color = 'red') +
+  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed') +
+  scale_y_continuous(limits = c(0,3)) +
+  scale_x_continuous(limits = c(0,3)) +
+  labs(x = 'Bootstrap RTA (log10 scale)',y = 'Gibbs RTA (log10 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.gibbs
+
+fig.scatter.boot <- ggplot(data = dt.scatter[IsGibbsOnly == FALSE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs))) +
+  geom_point(shape = 19,alpha = 0.1) +
+  geom_point(inherit.aes = FALSE,data = dt.scatter[IsBootOnly == TRUE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs)),shape = 19,alpha = 1,color = 'red') +
+  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed') +
+  scale_y_continuous(limits = c(0,3)) +
+  scale_x_continuous(limits = c(0,3)) +
+  labs(x = 'Bootstrap RTA (log10 scale)',y = 'Gibbs RTA (log10 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.boot
+```
+
+```{r lung_densities,fig.width=4,fig.height=4}
+lcpm <- cpm(dte.gibbs.filtr,log = T)
+colnames(lcpm) <- dte.gibbs.filtr$samples$Sample
+
+makeplot.density <- function(object, group = NULL, col = NULL, main = NULL, legend = "topleft", fontsize = 8, ...){
+  
+  E <- as.matrix(object)
+  narray <- ncol(E)
+  if (is.null(group)) 
+    group <- colnames(E)
+  if (is.null(group)) 
+    group <- 1:narray
+  group <- as.factor(group)
+  ngroup <- nlevels(group)
+  if (is.null(col)) 
+    col <- 1:ngroup
+  col <- rep(col, length = ngroup)
+  if (is.logical(legend)) {
+    legend.position <- "topleft"
+  }
+  else {
+    legend.position <- as.character(legend)
+    legend <- TRUE
+  }
+  legend.position <- match.arg(legend.position, c("bottomright", 
+                                                  "bottom", "bottomleft", "left", "topleft", "top", "topright", 
+                                                  "right", "center"))
+  arraycol <- group
+  levels(arraycol) <- col
+  arraycol <- as.vector(arraycol)
+  npoint <- 512
+  X <- Y <- matrix(0, npoint, narray)
+  for (a in 1:ncol(E)) {
+    d <- density(E[, a], n = npoint, na.rm = TRUE, ...)
+    X[, a] <- d$x
+    Y[, a] <- d$y
+  }
+  matplot(X, Y, xlab = "Log CPM", ylab = "Density", main = main, 
+          type = "l", col = arraycol, lwd = 2, lty = 1,
+          cex.lab = fontsize/12,
+          cex.axis = fontsize/12,
+          ylim = c(-0.01,0.25))
+  if (legend && ngroup > 1) 
+    legend(legend.position, lwd = 2, legend = levels(group), 
+           col = col)
+  points(x = alcpm[names(alcpm) %in% tx.gibbsonly],
+         y = rep(-0.005,length(tx.gibbsonly)),
+         pch = 4,cex = 0.5)
+  legend(x = 3,y = 0.24,
+         legend = c('H1975','HCC827'),
+         col = c(1:2),
+         bty = 'n',
+         lwd = c(2,2),
+         cex = fontsize/12)
+  legend(x = 3,y = 0.20,
+         legend = c('Gibbs-specific DE transcripts'),
+         bty = 'n',
+         pch = 4,
+         cex = fontsize/12)
+}
+
+summary(alcpm[names(alcpm) %in% tx.gibbsonly])
+
+makeplot.density(object = lcpm,
+                 group = 
+                   dte.gibbs.filtr$samples$group,
+                 legend = FALSE)
+
+file.density <- tempfile("density",fileext = '.png')
+png(file.density,width = 4,height = 4,units = 'in',res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+makeplot.density(object = lcpm,
+                 group = 
+                   dte.gibbs.filtr$samples$group,
+                 legend = FALSE)
+dev.off()
+
+fig.density <- readPNG(file.density, native = TRUE)
+```
+
+```{r lung_heatmap,fig.height=12,fig.width=5}
+GK <- getGeneKEGGLinks(species.KEGG = "hsa")
+cancerGenes <- GK$GeneID[GK$PathwayID %in% c('hsa05223','hsa05200')]
+interestGenes <- dt.anno[TXIDVERSION %in% tx.gibbsonly,unique(ENTREZID)]
+
+interestGenes.cancer <- interestGenes[interestGenes %in% cancerGenes]
+
+interestTx.cancer <- gr.tx[gr.tx$transcript_id %in% tx.gibbsonly & gr.tx$EntrezID %in% interestGenes.cancer]$transcript_id
+
+lcpm.scaled.cancer <- t(scale(t(lcpm)))
+lcpm.scaled.cancer <- lcpm.scaled.cancer[rownames(lcpm.scaled.cancer) %in% interestTx.cancer,]
+rownames(lcpm.scaled.cancer) <- gr.tx$transcript_name[match(rownames(lcpm.scaled.cancer),gr.tx$transcript_id)]
+
+foo.heat <- function(x,cluster_rows = TRUE, fontsize = 8,...){
+  Heatmap(matrix = x,
+          heatmap_legend_param = list(title = 'Expression',
+                                      title_position = 'topcenter',
+                                      direction = "horizontal",
+                                      at = seq(-3,3,1),
+                                      title_gp = gpar(fontsize = fontsize),
+                                      labels_gp = gpar(fontsize = fontsize)),
+          cluster_rows = cluster_rows,
+          cluster_columns = FALSE,
+          row_names_gp = gpar(fontsize = fontsize),
+          column_names_gp = gpar(fontsize = fontsize),
+          col = c("blue", "white", "red"),...) %>%
+    draw(heatmap_legend_side = "top")
+}
+
+foo.heat(lcpm.scaled.cancer)
+
+file.heat <- tempfile("heat",fileext = '.png')
+png(file.heat,width = 5,height = 12,units = 'in',res = 300)
+foo.heat(lcpm.scaled.cancer)
+dev.off()
+
+fig.heat <- readPNG(file.heat, native = TRUE)
+```
+
+```{r lung_venn,fig.width=5,fig.height=4}
+df.venn <- data.frame(row.names = rownames(dte.boot))
+
+df.venn$boot.v3 <- dt.boot.edgeR.legacy@.Data[match(rownames(df.venn),rownames(dt.boot.edgeR.legacy)),1]
+df.venn$gibbs.v4 <- dt.gibbs.edgeR.v4@.Data[match(rownames(df.venn),rownames(dt.gibbs.edgeR.v4)),1]
+df.venn[is.na(df.venn)] <- 0L
+
+make.venn <- function (object, include = "both", names = NULL, cex = c(1.5, 1, 0.7), lwd = 1, circle.col = NULL, counts.col = NULL, 
+                       show.include = NULL, ...) 
+{
+  include <- as.character(include)
+  LenInc <- min(length(include), 2)
+  if (is(object, "VennCounts")) {
+    include <- include[1]
+    LenInc <- 1
+  }
+  else {
+    if (LenInc > 1) 
+      z2 <- vennCounts(object, include = include[2])[, 
+                                                     "Counts"]
+    object <- vennCounts(object, include = include[1])
+  }
+  z <- object[, "Counts"]
+  nsets <- ncol(object) - 1
+  if (nsets > 5) 
+    stop("Can't plot Venn diagram for more than 5 sets")
+  VennZone <- object[, 1:nsets, drop = FALSE]
+  VennZone <- apply(VennZone, 1, function(x) paste(x, sep = "", collapse = ""))
+  names(z) <- VennZone
+  if (length(include) == 2) 
+    names(z2) <- VennZone
+  if (is.null(names)) 
+    names <- colnames(object)[1:nsets]
+  FILL.COL <- TRUE
+  if (is.null(circle.col)) {
+    circle.col <- par("col")
+    FILL.COL <- FALSE
+  }
+  if (length(circle.col) < nsets) 
+    circle.col <- rep_len(circle.col, length.out = nsets)
+  if (is.null(counts.col)) 
+    counts.col <- par("col")
+  if (length(counts.col) < LenInc) 
+    counts.col <- rep_len(counts.col, length.out = LenInc)
+  if (is.null(show.include)) 
+    show.include <- as.logical(LenInc - 1)
+  # old.par <- par()$mar
+  # on.exit(par(mar = old.par))
+  # par(mar = mar)
+  plot(x = 0, y = 0, type = "n", xlim = c(-2.8, 2.8), ylim = c(-2.35, 2.35), xlab = "", ylab = "", axes = FALSE, ...)
+  theta <- 2 * pi * (0:360)/360
+  xcentres <- switch(nsets, 0, c(-1, 1), c(-1, 1, 0))
+  ycentres <- switch(nsets, 0, c(0, 0), c(1, 1, -2)/sqrt(3))
+  r <- 1.5
+  xtext <- switch(nsets, -1.2, c(-1.2, 1.2), c(-1.2, 1.2, 0))
+  ytext <- switch(nsets, 1.8, c(1.8, 1.8), c(2.4, 2.4, -3))
+  for (circle in 1:nsets) {
+    if (!FILL.COL) 
+      lines(xcentres[circle] + r * cos(theta), ycentres[circle] + 
+              r * sin(theta), lwd = lwd, col = circle.col[circle])
+    if (FILL.COL) {
+      RGB <- col2rgb(circle.col[circle])/255
+      ALPHA <- 0.06
+      RGB.ALP <- rgb(RGB[1, 1], RGB[2, 1], RGB[3, 1], 
+                     alpha = ALPHA)
+      polygon(xcentres[circle] + r * cos(theta), ycentres[circle] + 
+                r * sin(theta), border = circle.col[circle], 
+              lwd = lwd, col = RGB.ALP)
+    }
+    text(xtext[circle], ytext[circle], names[circle], cex = cex)
+  }
+  switch(nsets, rect(-3, -2.5, 3, 2.5), rect(-3, -2.5, 3, 2.5), rect(-3, -3.5, 3, 3.3))
+  showCounts <- switch(nsets, function(counts, cex, adj, col, leg) {
+    text(2.3, -2.1, counts[1], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0, counts[2], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.3, -2.1, leg, cex = cex, 
+                           col = col, adj = adj)
+  }, function(counts, cex, adj, col, leg) {
+    text(2.3, -2.1, counts[1], cex = cex, col = col, 
+         adj = adj)
+    text(1.5, 0.1, counts[2], cex = cex, col = col, adj = adj)
+    text(-1.5, 0.1, counts[3], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0.1, counts[4], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.3, -2.1, leg, cex = cex, 
+                           col = col, adj = adj)
+  }, function(counts, cex, adj, col, leg) {
+    text(2.5, -3, counts[1], cex = cex, col = col, adj = adj)
+    text(0, -1.7, counts[2], cex = cex, col = col, adj = adj)
+    text(1.5, 1, counts[3], cex = cex, col = col, adj = adj)
+    text(0.75, -0.35, counts[4], cex = cex, col = col, 
+         adj = adj)
+    text(-1.5, 1, counts[5], cex = cex, col = col, adj = adj)
+    text(-0.75, -0.35, counts[6], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0.9, counts[7], cex = cex, col = col, adj = adj)
+    text(0, 0, counts[8], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.5, -3, leg, cex = cex, 
+                           col = col, adj = adj)
+  })
+  if (LenInc == 1) 
+    adj <- c(0.5, 0.5)
+  else adj <- c(0.5, 0)
+  showCounts(counts = z, cex = cex[1], adj = adj, col = counts.col[1], leg = include[1])
+  if (LenInc == 2) 
+    showCounts(counts = z2, cex = cex[1], adj = c(0.5, 1), col = counts.col[2], leg = include[2])
+}
+
+make.venn(df.venn, 
+          names = c('edgeR-v3 (bootstrap)','edgeR-v4 (Gibbs)'),
+          cex = rep(8,3)/12,
+          include = c("up", "down"),
+          counts.col = c("red", "blue"),
+          circle.col = c("red", "blue"))
+
+file.venn <- tempfile("venn",fileext = '.png')
+png(file.venn,width = 5,height = 4,units = 'in',res = 300)
+par(mar = c(0.25, 0.25, 0.25, 0.25),mgp = c(2,1,0))
+make.venn(df.venn, 
+          names = c('edgeR-v3 (bootstrap)','edgeR-v4 (Gibbs)'),
+          cex = rep(8,3)/12,
+          include = c("up", "down"),
+          counts.col = c("red", "blue"),
+          circle.col = c("red", "blue"))
+dev.off()
+
+fig.venn <- readPNG(file.venn, native = TRUE)
+```
+
+```{r lung_newde}
+tx.newde <- 
+  dt.dte[edgeR.boot.legacy == FALSE & 
+           edgeR.gibbs.v4 == TRUE,TranscriptID]
+
+out.newde <- 
+  out.gibbs.edgeR.v4[out.gibbs.edgeR.v4$table$EntrezID %in% cancerGenes & rownames(out.gibbs.edgeR.v4) %in% tx.newde,]$table
+out.newde$Biotype <- dt.anno$TXBIOTYPE[match(rownames(out.newde),dt.anno$TXIDVERSION)]
+out.newde$TranscriptID <- rownames(out.newde)
+
+out.newde <- as.data.table(out.newde)
+
+dim(out.newde)
+```
+
+```{r lung_isoswitch}
+f <- function(x,fdr = 0.05){
+  z <- x$FDR
+  y <- x$logFC
+  y <- y[z<0.05]
+  if(length(y) == 0 | length(y) == 1) return(FALSE)
+  if(length(unique(sign(y))) == 1) return(FALSE)
+  return(TRUE)
+}
+
+dt.out.gibbs.edgeR.v4 <- out.gibbs.edgeR.v4$table
+dt.out.gibbs.edgeR.v4$TranscriptID <- rownames(dt.out.gibbs.edgeR.v4)
+dt.out.gibbs.edgeR.v4 <- as.data.table(dt.out.gibbs.edgeR.v4)
+dt.out.gibbs.edgeR.v4[,IsoSwitch := f(.SD),by = 'GeneID',.SDcols = c('logFC','FDR')]
+is.gibbs.edgeR.v4 <- unique(dt.out.gibbs.edgeR.v4[IsoSwitch == TRUE,EntrezID])
+
+dt.out.boot.edgeR.legacy <- out.boot.edgeR.legacy$table
+dt.out.boot.edgeR.legacy$TranscriptID <- rownames(dt.out.boot.edgeR.legacy)
+dt.out.boot.edgeR.legacy <- as.data.table(dt.out.boot.edgeR.legacy)
+dt.out.boot.edgeR.legacy[,IsoSwitch := f(.SD),by = 'GeneID',.SDcols = c('logFC','FDR')]
+is.boot.edgeR.legacy <- unique(dt.out.boot.edgeR.legacy[IsoSwitch == TRUE,EntrezID])
+
+is.new <- is.gibbs.edgeR.v4[!is.gibbs.edgeR.v4 %in% is.boot.edgeR.legacy]
+length(is.new)
+
+dt.out.gibbs.edgeR.v4[EntrezID %in% is.new[is.new %in% cancerGenes] & FDR < 0.05,]
+```
+
+## Comparison of biological coefficient of variation between raw and scaled counts
+
+The biological coefficient of variation (BCV) plot is a key plot to assess the improvements of the count scaling approach. 
+
+In the `edgeR` terminology, BCV refers to the square-root of the negative binomial (NB) dispersion parameter. For RNA-seq data summarized at the gene-level, in which case the mapping ambiguity is nearly negligible, the NB dispersions tend to be higher for genes with low counts and its trend decreases smoothly with abundance while asymptoting to a constant value for genes with large counts. At the transcript-level, on the other hand, mapping ambiguity is often highly transcript-specific, and estimated NB dispersions based on raw counts should be artificially higher for transcripts associated with high mapping ambiguity. As a result, the estimated NB dispersions of such ambiguous transcripts will deviate from the standard smooth decreasing NB dispersion trend when raw counts are considered.
+
+Under the assumptions of our presented overdispersed Poisson model, effective counts computed via the presented count scaling approach should lead to estimated NB dispersions that, in a BCV plot, present themselves without strong transcript-specific mapping ambiguity effects and, in principle, should result in BCV plots similar to those from gene-level analyses.
+
+Below we compare the BCV plots using raw and scaled counts. First, I recode the plotBCV function into `foo.bcv` so that we can place the plots into panels with the `patchwork` package.
+
+```{r casestudy_res_bcv}
+# plotBCV returns invisible(), we need to manually export the plot (code from edgeR::plotBCV)
+foo.bcv <- function (y, 
+                     xlab = "Average log CPM", 
+                     ylab = "Biological coefficient of variation", 
+                     pch = 16, cex = 0.2,
+                     col.common = "red", 
+                     col.trend = "blue", 
+                     col.tagwise = "black", 
+                     fontsize = 8, ...) {
+  if (!is(y, "DGEList")) 
+    stop("y must be a DGEList.")
+  A <- y$AveLogCPM
+  if (is.null(A)) 
+    A <- aveLogCPM(y$counts, offset = getOffset(y))
+  disp <- getDispersion(y)
+  if (is.null(disp)) 
+    stop("No dispersions to plot")
+  if (attr(disp, "type") == "common") 
+    disp <- rep_len(disp, length(A))
+  par(mar = c(3, 3, 0.25, 0.25),mgp = c(1.25,0.5,0))
+  plot(A, sqrt(disp), xlab = xlab, ylab = ylab, type = "n", 
+       cex.lab = fontsize/12,
+       cex.axis = fontsize/12,
+       ...)
+  labels <- cols <- lty <- pt <- NULL
+  if (!is.null(y$tagwise.dispersion)) {
+    points(A, sqrt(y$tagwise.dispersion), pch = pch, cex = cex, 
+           col = col.tagwise)
+    labels <- c(labels, "Tagwise")
+    cols <- c(cols, col.tagwise)
+    lty <- c(lty, -1)
+    pt <- c(pt, pch)
+  }
+  if (!is.null(y$common.dispersion)) {
+    abline(h = sqrt(y$common.dispersion), col = col.common, 
+           lwd = 2)
+    labels <- c(labels, "Common")
+    cols <- c(cols, col.common)
+    lty <- c(lty, 1)
+    pt <- c(pt, -1)
+  }
+  if (!is.null(y$trended.dispersion)) {
+    o <- order(A)
+    lines(A[o], sqrt(y$trended.dispersion)[o], col = col.trend, 
+          lwd = 2)
+    labels <- c(labels, "Trend")
+    cols <- c(cols, col.trend)
+    lty <- c(lty, 1)
+    pt <- c(pt, -1)
+  }
+  legend("topright", legend = labels, lty = lty, pch = pt, 
+         pt.cex = cex, lwd = 2, col = cols,cex = fontsize/12)
+}
+```
+
+Then, I generate the BCV plots from the real datasets.
+
+```{r casestudy_res_real,fig.height=3,fig.width=3}
+plot.bcv.real.raw <- wrap_elements(full = ~foo.bcv(dte.raw.filtr.legacy))
+plot.bcv.real.boot <- wrap_elements(full = ~foo.bcv(dte.boot.filtr.legacy,ylim = c(0.05,0.9)))
+plot.bcv.real.gibbs <- wrap_elements(full = ~foo.bcv(dte.gibbs.filtr.legacy,ylim = c(0.05,0.9)))
+
+plot.bcv.real.raw
+plot.bcv.real.boot
+plot.bcv.real.gibbs
+```
+
+To verify whether our simulated reproduces the caracteristics of the real data, we present BCV plots from raw and scaled counts from a single simulated dataset generated with unbalanced library sizes, 5 samples per group, 100bp paired-end read data, all references transcripts expressed, and quantified with Salmon.
+
+```{r casestudy_res_bcv_sim,fig.height=3,fig.width=3}
+catch.sim.boot <- catchSalmon(list.dirs(file.path(path.sim,'quant-salmon'),recursive = FALSE))
+colnames(catch.sim.boot$counts) <- gsub("group|_R1","",basename(colnames(catch.sim.boot$counts)))
+
+catch.sim.gibbs <- catchSalmon(list.dirs(file.path(path.sim,'quant-salmon-gibbs'),recursive = FALSE))
+colnames(catch.sim.gibbs$counts) <- gsub("group|_R1","",basename(colnames(catch.sim.gibbs$counts)))
+
+dte.sim.raw <- DGEList(counts = catch.sim.gibbs$counts,
+                       samples = colnames(catch.sim.gibbs$counts),
+                       group = strsplit2(colnames(catch.sim.gibbs$counts),"_")[,1])
+dte.sim.raw$genes <- data.frame(row.names = rownames(dte.sim.raw))
+dte.sim.raw$genes$Bootstrap.Overdispersion <- 
+  catch.sim.boot$annotation$Overdispersion[match(rownames(catch.sim.boot$annotation),rownames(dte.sim.raw))]
+
+dte.sim.raw$genes$Gibbs.Overdispersion <- 
+  catch.sim.gibbs$annotation$Overdispersion[match(rownames(catch.sim.gibbs$annotation),rownames(dte.sim.raw))]
+
+design.sim <- model.matrix( ~ 0 + group,data = dte.sim.raw$samples)
+
+keep.sim.raw <- filterByExpr(dte.sim.raw)
+dte.sim.raw.filtr <- dte.sim.raw[keep.sim.raw,, keep.lib.sizes = FALSE]
+dte.sim.raw.filtr <- normLibSizes(dte.sim.raw.filtr)
+dte.sim.raw.filtr <- estimateDisp(dte.sim.raw.filtr,design = design.sim)
+
+dte.sim.gibbs <- dte.sim.raw
+dte.sim.gibbs$counts <- dte.sim.gibbs$counts/dte.sim.gibbs$genes$Gibbs.Overdispersion
+keep.sim.gibbs <- filterByExpr(dte.sim.gibbs)
+dte.sim.gibbs.filtr <- dte.sim.gibbs[keep.sim.gibbs,, keep.lib.sizes = FALSE]
+dte.sim.gibbs.filtr <- normLibSizes(dte.sim.gibbs.filtr)
+dte.sim.gibbs.filtr <- estimateDisp(dte.sim.gibbs.filtr,design = design.sim)
+
+dte.sim.boot <- dte.sim.raw
+dte.sim.boot$counts <- dte.sim.boot$counts/dte.sim.boot$genes$Bootstrap.Overdispersion
+keep.sim.boot <- filterByExpr(dte.sim.boot)
+dte.sim.boot.filtr <- dte.sim.boot[keep.sim.boot,, keep.lib.sizes = FALSE]
+dte.sim.boot.filtr <- normLibSizes(dte.sim.boot.filtr)
+dte.sim.boot.filtr <- estimateDisp(dte.sim.boot.filtr,design = design.sim)
+
+plot.bcv.sim.raw <- wrap_elements(full = ~foo.bcv(dte.sim.raw.filtr))
+plot.bcv.sim.boot <- wrap_elements(full = ~foo.bcv(dte.sim.boot.filtr,ylim = c(0.2,0.625)))
+plot.bcv.sim.gibbs <- wrap_elements(full = ~foo.bcv(dte.sim.gibbs.filtr,ylim = c(0.2,0.625)))
+
+plot.bcv.sim.raw
+plot.bcv.sim.boot
+plot.bcv.sim.gibbs
+```
+
+## Coverage plots
+
+```{r lung_coverage}
+txdb <- 
+  makeTxDbFromGRanges(gr[gr$transcript_id %in% gr.tx$transcript_id])
+BAM <- file.path(path.bam,paste0(dte.boot$samples$GSM,'.bam'))
+BAM.tracks <- lapply(1:length(BAM),function(x){AlignmentsTrack(BAM[x],name = basename(BAM[x]),isPaired = TRUE,background.title = 'black')})
+```
+
+```{r lung_covfunctions}
+geneTrack <- 
+  GeneRegionTrack(txdb,showId=TRUE,
+                  just.group = 'right',
+                  background.title = "white",
+                  fill = 'grey',
+                  name = 'Transcripts',
+                  col.title = 'black',
+                  fontcolor.group = 'black')
+
+ranges(geneTrack)$symbol <- 
+  gr.tx$transcript_name[match(ranges(geneTrack)$symbol,gr.tx$transcript_id)]
+
+getGeneRanges <- function(entrezid,type = 'gene',flank = TRUE){
+  out <-
+    genes(TxDb.Mmusculus.UCSC.mm39.refGene, filter = list(gene_id = entrezid))
+  if (type == 'promoter') {
+    out <- promoters(out)
+  }
+  if(flank == TRUE & type == 'gene'){
+    flank <- ceiling(0.25*width(out))
+    out <- GRanges(seqnames = as.character(seqnames(out)),IRanges(start = start(out)-flank,end = end(out) + flank))
+  }
+  
+  return(out)
+}
+
+getCoverage <- function(bam, lib.sizes, gr, param, labels = NULL, group.by = NULL, ...) {
+  reads <- bplapply(seq_along(bam),function(i){
+    # For some readson csaw has trouble with library GSM5255705 and says
+    # that all mate reads are unpaired.
+    reads <- extractReads(bam.file = bam[i], gr, param = param,as.reads = TRUE)
+  },...)
+  
+  if (!is.null(group.by)) {
+    groups <- unique(group.by)
+    reads <- bplapply(seq_along(groups),function(i){
+      subreads <- reads[group.by == groups[i]]
+      do.call('c',subreads)
+    },...)
+    names(reads) <- groups
+    
+    lib.sizes <- bplapply(seq_along(groups),function(i){
+      sum(lib.sizes[group.by == groups[i]])
+    },...)
+    lib.sizes <- unlist(lib.sizes)
+  } else{
+    if (is.null(labels)) {
+      names(reads) <- bam
+    } else{
+      names(reads) <- labels
+    }
+    
+  }
+  
+  cov <- bplapply(seq_along(reads),function(i){
+    as(coverage(reads[[i]])/(lib.sizes[i]/1e6), "GRanges")
+  },...)
+  names(cov) <- names(reads)
+  return(cov)
+}
+
+getTrack <- function(cov, fill = NULL, ylim = NULL,yTicksAt = NULL, ...) {
+  if (is.null(fill)) {
+    fill <- rep('gray',length(cov))
+  }
+  if (is.null(ylim)) {
+    max.y <- max(unlist(lapply(cov,function(i){max(i$score)})))
+    ylim <- c(0,round(max.y + 5, -1))
+  }
+  out <- bplapply(seq_along(cov),function(i){
+    DataTrack(cov[[i]],
+              type = "histogram",
+              ylim = ylim,
+              yTicksAt = yTicksAt,
+              name = names(cov[i]),
+              fill = fill[i],
+              col.title = 'black',
+              background.title = "white",
+              col.axis = 'black',
+              col.histogram = NA)
+  },...)
+  
+  return(out)
+}
+
+plotCoverage <- function(bam,lib.sizes,param,anno,fontsize = 8,
+                         gr = NULL,entrezid = NULL,fill = NULL, labels = NULL, group.by = NULL, flank = TRUE, main = NULL,ylim = NULL, yTicksAt = NULL, ...){
+  if(!is.null(entrezid)){
+    gr <- getGeneRanges(entrezid,flank = TRUE)
+  }
+  cov <- getCoverage(bam = bam,lib.sizes = lib.sizes,gr = gr,param = param,group.by = group.by,labels = labels,...)
+  
+  if (!is.null(fill) & !is.null(group.by)) {
+    groups <- unique(group.by)
+    fill <- lapply(seq_along(groups),function(i){
+      subfill <- unique(fill[group.by == groups[i]])
+      if(length(subfill) == 1){
+        return(subfill)
+      } else{
+        stop('fill argument must be unique within groups')
+      }
+    })
+    fill <- unlist(fill)
+  }
+  track <- getTrack(cov = cov,fill = fill,ylim = ylim,yTicksAt = yTicksAt)
+  
+  itrack <- IdeogramTrack(genome = 'hg38', 
+                          chromosome = as.character(seqnames(gr)),
+                          fontcolor = 'black',
+                          cex = fontsize/12)
+  axisTrack <- GenomeAxisTrack(cex = fontsize/12)
+  
+  plotTracks(c(itrack,axisTrack,track, anno),
+             chromosome = as.character(seqnames(gr)),
+             cex.axis = fontsize/12,
+             cex.title = fontsize/12,
+             cex.group = fontsize/12,
+             sizes = c(0.1,0.75,rep(0.75,6), 1),
+             from = start(gr),
+             to = end(gr))
+}
+```
+
+```{r lung_rtacoverage_znf16}
+cs.boot$counts[grepl("^HABP2-",cs.boot$annotation$TranscriptSymbol),]
+cs.boot$annotation[grepl("^HABP2-",cs.boot$annotation$TranscriptSymbol),]
+
+t(t(cs.boot$counts[grepl("^HABP2-",cs.boot$annotation$TranscriptSymbol),])/
+    colSums(cs.boot$counts[grepl("^HABP2-",cs.boot$annotation$TranscriptSymbol),]))[2,]
+
+cs.gibbs$counts[grepl("^HABP2-",cs.gibbs$annotation$TranscriptSymbol),]
+cs.gibbs$annotation[grepl("^HABP2-",cs.gibbs$annotation$TranscriptSymbol),]
+```
+
+```{r lung_rtacoverage_bcl2}
+cs.boot$counts[grepl("^BBC3-",cs.boot$annotation$TranscriptSymbol),]
+cs.boot$annotation[grepl("^BBC3-",cs.boot$annotation$TranscriptSymbol),]
+out.boot.edgeR.v4$table[grepl("^BBC3-",out.boot.edgeR.v4$table$TranscriptSymbol),]
+
+cs.gibbs$counts[grepl("^BBC3-",cs.gibbs$annotation$TranscriptSymbol),]
+cs.gibbs$annotation[grepl("^BBC3-",cs.gibbs$annotation$TranscriptSymbol),]
+out.gibbs.edgeR.v4$table[grepl("^BBC3-",out.gibbs.edgeR.v4$table$TranscriptSymbol),]
+```
+
+```{r lung_makecoverage}
+HABP2 <- tempfile("HABP2",fileext = 'png')
+BBC3 <- tempfile("BBC3",fileext = 'png')
+
+param <- readParam(pe = 'none',restrict = paste0("chr", c(1:19, "X", "Y")))
+
+geneTrack.left <- geneTrack
+geneTrack.left@dp@pars$just.group <- 'left'
+
+png(HABP2,height = 8,width = 4,res = 300,units = 'in')
+plotCoverage(gr = GRanges('chr10',IRanges(113535000,113591602)),
+             bam = BAM,
+             lib.sizes = dte.boot$samples$lib.size,
+             param = param,
+             anno = geneTrack.left,
+             fill = c(rep('#000000',3),rep('#ca5b6a',3)),
+             ylim = c(0,2),
+             yTicksAt = c(0,1,2),
+             labels = dte.boot$samples$Sample)
+dev.off()
+
+png(BBC3,height = 8,width = 4,res = 300,units = 'in')
+plotCoverage(gr = GRanges('chr19',IRanges(47217500,47234860)),
+             bam = BAM,
+             lib.sizes = dte.boot$samples$lib.size,
+             param = param,
+             anno = geneTrack.left,
+             fill = c(rep('#000000',3),rep('#ca5b6a',3)),
+             ylim = c(0,4),
+             yTicksAt = c(0,2,4),
+             labels = dte.boot$samples$Sample)
+dev.off()
+
+fig.HABP2 <- readPNG(HABP2, native = TRUE)
+fig.BBC3 <- readPNG(BBC3, native = TRUE)
+
+include_graphics(HABP2)
+include_graphics(BBC3)
+```
+
+# Output files
+
+```{r lung_output_main}
+# Plot RTA overdispersion
+fig.rta <- wrap_plots(A = fig.scatter.salmon,
+                      B = fig.rtama.salmon,
+                      C = fig.resampling.salmon,
+                      design = c(area(1,1),area(2,1),area(1,2,2,2)),
+                      widths = c(2.5,5.5)/8) + 
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta,
+       filename = file.path(path.misc,'Figure-RTA.png'),
+       device = 'png',width = 8,height = 5,units = 'in',dpi = 300)
+
+# Plot DTE
+fig.dte <- wrap_plots(A = wrap_elements(fig.ql),
+                      B = wrap_elements(fig.venn),
+                      C = wrap_elements(fig.upset),
+                      D = wrap_elements(fig.heat),
+                      design = c(area(1,1),area(2,1),area(3,1),area(1,2,3,2))) + 
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.dte,
+       filename = file.path(path.misc,'Figure-DTE.png'),
+       height = 12,width = 10)
+
+# Plot coverage
+fig.coverage <- wrap_elements(fig.HABP2) + wrap_elements(fig.BBC3)
+fig.coverage <- fig.coverage +
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.coverage,
+       filename = file.path(path.misc,'Figure-Coverage.png'),
+       height = 8,width = 8)
+```
+
+```{r lung_output_supp}
+# Plot RTA overdispersion
+fig.rta.supp <- wrap_plots(A = fig.scatter.kallisto,
+                           B = fig.rtama.kallisto,
+                           C = fig.resampling.kallisto,
+                           design = c(area(1,1),area(2,1),area(1,2,2,2)),
+                           widths = c(2.5,5.5)/8) + 
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta.supp,
+       filename = file.path(path.misc,'SuppFigure-RTA.png'),
+       device = 'png',width = 8,height = 5,units = 'in',dpi = 300)
+
+# Plot densities
+fig.density.plot <- wrap_plots(A = wrap_elements(fig.density))
+ggsave(plot = fig.density.plot,
+       filename = file.path(path.misc,'SuppFigure-Density.png'),
+       height = 4,width = 4)
+
+# Plot RTA overdispersion DTE
+fig.rta.dte <- wrap_plots(A = fig.scatter.gibbs,
+                          B = fig.scatter.boot,
+                          design = c(area(1,1),area(1,2))) + 
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta.dte,
+       filename = file.path(path.misc,'SuppFigure-RTA-DTE.png'),
+       device = 'png',width = 6,height = 3,units = 'in',dpi = 300)
+
+# Plot BCVs
+fig.bcv <- wrap_plots(A = plot.bcv.real.raw,
+                      B = plot.bcv.real.boot,
+                      C = plot.bcv.real.gibbs,
+                      D = plot.bcv.sim.raw,
+                      E = plot.bcv.sim.boot,
+                      `F` = plot.bcv.sim.gibbs,
+                      design = c(area(1,1),area(1,2),area(1,3),
+                                 area(2,1),area(2,2),area(2,3))) + 
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.bcv,
+       filename = file.path(path.misc,'SuppFigure-BCV.png'),
+       device = 'png',width = 9,height = 6,units = 'in',dpi = 300)
+```
