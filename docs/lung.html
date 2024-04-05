@@ -1,0 +1,2758 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Pedro L. Baldoni" />
+
+
+<title>Analysis of the human lung cancer cell lines dataset</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">GibbsDTE-code</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/plbaldoni/GibbsDTE-code">
+    <span class="fab fa-github"></span>
+     
+    GitHub
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Analysis of the human lung cancer cell
+lines dataset</h1>
+<h4 class="author">Pedro L. Baldoni</h4>
+<h4 class="date">05 April, 2024</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2024-04-05
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>GibbsDTE-code/analysis/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20231211code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20231211)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20231211code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20231211)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetree531a9f8317a6ebb9c187cad1230b0dc06764ffc9targetblank531a9f8a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/531a9f8317a6ebb9c187cad1230b0dc06764ffc9" target="_blank">531a9f8</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetree531a9f8317a6ebb9c187cad1230b0dc06764ffc9targetblank531a9f8a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/531a9f8317a6ebb9c187cad1230b0dc06764ffc9" target="_blank">531a9f8</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rprofile
+    Ignored:    .Rproj.user/
+    Ignored:    .gitattributes
+    Ignored:    .gitignore
+    Ignored:    GibbsDTE-code.Rproj
+    Ignored:    code/lung/data/slurm-10678225.out
+    Ignored:    code/lung/index-subread/.RData
+    Ignored:    code/lung/index-subread/buildindex.Rout
+    Ignored:    code/lung/index-subread/slurm-15397947.out
+    Ignored:    code/lung/index-subread/slurm-15397948.out
+    Ignored:    code/lung/index-subread/slurm-15397949.out
+    Ignored:    code/lung/index/slurm-10679764.out
+    Ignored:    code/lung/index/slurm-10679768.out
+    Ignored:    code/lung/index/slurm-10684814.out
+    Ignored:    code/lung/kallisto/slurm-16121443.out
+    Ignored:    code/lung/salmon/.RData
+    Ignored:    code/lung/salmon/runWasabi.Rout
+    Ignored:    code/lung/salmon/slurm-15257704.out
+    Ignored:    code/lung/salmon/slurm-15397973.out
+    Ignored:    code/lung/salmon/slurm-15887027.out
+    Ignored:    code/lung/subread/.nextflow.log
+    Ignored:    code/lung/subread/.nextflow/
+    Ignored:    code/lung/subread/log/
+    Ignored:    code/lung/subread/report.html
+    Ignored:    code/lung/subread/slurm-15398003.out
+    Ignored:    code/lung/subread/timeline.html
+    Ignored:    code/lung/subread/trace-20240201-45121600.txt
+    Ignored:    code/pkg/.Rbuildignore
+    Ignored:    code/pkg/.Rhistory
+    Ignored:    code/pkg/.Rproj.user/
+    Ignored:    code/pkg/pkg.Rproj
+    Ignored:    code/pkg/src/.gitignore
+    Ignored:    code/pkg/src/RcppExports.o
+    Ignored:    code/pkg/src/pkg.so
+    Ignored:    code/pkg/src/rcpparma_hello_world.o
+    Ignored:    code/simulation/.RData
+    Ignored:    code/simulation/slurm-15466798.out
+    Ignored:    code/simulation/slurm-15466799_1.out
+    Ignored:    code/simulation/slurm-15466799_10.out
+    Ignored:    code/simulation/slurm-15466799_100.out
+    Ignored:    code/simulation/slurm-15466799_101.out
+    Ignored:    code/simulation/slurm-15466799_102.out
+    Ignored:    code/simulation/slurm-15466799_103.out
+    Ignored:    code/simulation/slurm-15466799_104.out
+    Ignored:    code/simulation/slurm-15466799_105.out
+    Ignored:    code/simulation/slurm-15466799_106.out
+    Ignored:    code/simulation/slurm-15466799_107.out
+    Ignored:    code/simulation/slurm-15466799_108.out
+    Ignored:    code/simulation/slurm-15466799_109.out
+    Ignored:    code/simulation/slurm-15466799_11.out
+    Ignored:    code/simulation/slurm-15466799_110.out
+    Ignored:    code/simulation/slurm-15466799_111.out
+    Ignored:    code/simulation/slurm-15466799_112.out
+    Ignored:    code/simulation/slurm-15466799_113.out
+    Ignored:    code/simulation/slurm-15466799_114.out
+    Ignored:    code/simulation/slurm-15466799_115.out
+    Ignored:    code/simulation/slurm-15466799_116.out
+    Ignored:    code/simulation/slurm-15466799_117.out
+    Ignored:    code/simulation/slurm-15466799_118.out
+    Ignored:    code/simulation/slurm-15466799_119.out
+    Ignored:    code/simulation/slurm-15466799_12.out
+    Ignored:    code/simulation/slurm-15466799_120.out
+    Ignored:    code/simulation/slurm-15466799_121.out
+    Ignored:    code/simulation/slurm-15466799_122.out
+    Ignored:    code/simulation/slurm-15466799_123.out
+    Ignored:    code/simulation/slurm-15466799_124.out
+    Ignored:    code/simulation/slurm-15466799_125.out
+    Ignored:    code/simulation/slurm-15466799_126.out
+    Ignored:    code/simulation/slurm-15466799_127.out
+    Ignored:    code/simulation/slurm-15466799_128.out
+    Ignored:    code/simulation/slurm-15466799_129.out
+    Ignored:    code/simulation/slurm-15466799_13.out
+    Ignored:    code/simulation/slurm-15466799_130.out
+    Ignored:    code/simulation/slurm-15466799_131.out
+    Ignored:    code/simulation/slurm-15466799_132.out
+    Ignored:    code/simulation/slurm-15466799_133.out
+    Ignored:    code/simulation/slurm-15466799_134.out
+    Ignored:    code/simulation/slurm-15466799_135.out
+    Ignored:    code/simulation/slurm-15466799_136.out
+    Ignored:    code/simulation/slurm-15466799_137.out
+    Ignored:    code/simulation/slurm-15466799_138.out
+    Ignored:    code/simulation/slurm-15466799_139.out
+    Ignored:    code/simulation/slurm-15466799_14.out
+    Ignored:    code/simulation/slurm-15466799_140.out
+    Ignored:    code/simulation/slurm-15466799_141.out
+    Ignored:    code/simulation/slurm-15466799_142.out
+    Ignored:    code/simulation/slurm-15466799_143.out
+    Ignored:    code/simulation/slurm-15466799_144.out
+    Ignored:    code/simulation/slurm-15466799_145.out
+    Ignored:    code/simulation/slurm-15466799_146.out
+    Ignored:    code/simulation/slurm-15466799_147.out
+    Ignored:    code/simulation/slurm-15466799_148.out
+    Ignored:    code/simulation/slurm-15466799_149.out
+    Ignored:    code/simulation/slurm-15466799_15.out
+    Ignored:    code/simulation/slurm-15466799_150.out
+    Ignored:    code/simulation/slurm-15466799_151.out
+    Ignored:    code/simulation/slurm-15466799_152.out
+    Ignored:    code/simulation/slurm-15466799_153.out
+    Ignored:    code/simulation/slurm-15466799_154.out
+    Ignored:    code/simulation/slurm-15466799_155.out
+    Ignored:    code/simulation/slurm-15466799_156.out
+    Ignored:    code/simulation/slurm-15466799_157.out
+    Ignored:    code/simulation/slurm-15466799_158.out
+    Ignored:    code/simulation/slurm-15466799_159.out
+    Ignored:    code/simulation/slurm-15466799_16.out
+    Ignored:    code/simulation/slurm-15466799_160.out
+    Ignored:    code/simulation/slurm-15466799_161.out
+    Ignored:    code/simulation/slurm-15466799_162.out
+    Ignored:    code/simulation/slurm-15466799_163.out
+    Ignored:    code/simulation/slurm-15466799_164.out
+    Ignored:    code/simulation/slurm-15466799_165.out
+    Ignored:    code/simulation/slurm-15466799_166.out
+    Ignored:    code/simulation/slurm-15466799_167.out
+    Ignored:    code/simulation/slurm-15466799_168.out
+    Ignored:    code/simulation/slurm-15466799_169.out
+    Ignored:    code/simulation/slurm-15466799_17.out
+    Ignored:    code/simulation/slurm-15466799_170.out
+    Ignored:    code/simulation/slurm-15466799_171.out
+    Ignored:    code/simulation/slurm-15466799_172.out
+    Ignored:    code/simulation/slurm-15466799_173.out
+    Ignored:    code/simulation/slurm-15466799_174.out
+    Ignored:    code/simulation/slurm-15466799_175.out
+    Ignored:    code/simulation/slurm-15466799_176.out
+    Ignored:    code/simulation/slurm-15466799_177.out
+    Ignored:    code/simulation/slurm-15466799_178.out
+    Ignored:    code/simulation/slurm-15466799_179.out
+    Ignored:    code/simulation/slurm-15466799_18.out
+    Ignored:    code/simulation/slurm-15466799_180.out
+    Ignored:    code/simulation/slurm-15466799_181.out
+    Ignored:    code/simulation/slurm-15466799_182.out
+    Ignored:    code/simulation/slurm-15466799_183.out
+    Ignored:    code/simulation/slurm-15466799_184.out
+    Ignored:    code/simulation/slurm-15466799_185.out
+    Ignored:    code/simulation/slurm-15466799_186.out
+    Ignored:    code/simulation/slurm-15466799_187.out
+    Ignored:    code/simulation/slurm-15466799_188.out
+    Ignored:    code/simulation/slurm-15466799_189.out
+    Ignored:    code/simulation/slurm-15466799_19.out
+    Ignored:    code/simulation/slurm-15466799_190.out
+    Ignored:    code/simulation/slurm-15466799_191.out
+    Ignored:    code/simulation/slurm-15466799_192.out
+    Ignored:    code/simulation/slurm-15466799_193.out
+    Ignored:    code/simulation/slurm-15466799_194.out
+    Ignored:    code/simulation/slurm-15466799_195.out
+    Ignored:    code/simulation/slurm-15466799_196.out
+    Ignored:    code/simulation/slurm-15466799_197.out
+    Ignored:    code/simulation/slurm-15466799_198.out
+    Ignored:    code/simulation/slurm-15466799_199.out
+    Ignored:    code/simulation/slurm-15466799_2.out
+    Ignored:    code/simulation/slurm-15466799_20.out
+    Ignored:    code/simulation/slurm-15466799_200.out
+    Ignored:    code/simulation/slurm-15466799_21.out
+    Ignored:    code/simulation/slurm-15466799_22.out
+    Ignored:    code/simulation/slurm-15466799_23.out
+    Ignored:    code/simulation/slurm-15466799_24.out
+    Ignored:    code/simulation/slurm-15466799_25.out
+    Ignored:    code/simulation/slurm-15466799_26.out
+    Ignored:    code/simulation/slurm-15466799_27.out
+    Ignored:    code/simulation/slurm-15466799_28.out
+    Ignored:    code/simulation/slurm-15466799_29.out
+    Ignored:    code/simulation/slurm-15466799_3.out
+    Ignored:    code/simulation/slurm-15466799_30.out
+    Ignored:    code/simulation/slurm-15466799_31.out
+    Ignored:    code/simulation/slurm-15466799_32.out
+    Ignored:    code/simulation/slurm-15466799_33.out
+    Ignored:    code/simulation/slurm-15466799_34.out
+    Ignored:    code/simulation/slurm-15466799_35.out
+    Ignored:    code/simulation/slurm-15466799_36.out
+    Ignored:    code/simulation/slurm-15466799_37.out
+    Ignored:    code/simulation/slurm-15466799_38.out
+    Ignored:    code/simulation/slurm-15466799_39.out
+    Ignored:    code/simulation/slurm-15466799_4.out
+    Ignored:    code/simulation/slurm-15466799_40.out
+    Ignored:    code/simulation/slurm-15466799_41.out
+    Ignored:    code/simulation/slurm-15466799_42.out
+    Ignored:    code/simulation/slurm-15466799_43.out
+    Ignored:    code/simulation/slurm-15466799_44.out
+    Ignored:    code/simulation/slurm-15466799_45.out
+    Ignored:    code/simulation/slurm-15466799_46.out
+    Ignored:    code/simulation/slurm-15466799_47.out
+    Ignored:    code/simulation/slurm-15466799_48.out
+    Ignored:    code/simulation/slurm-15466799_49.out
+    Ignored:    code/simulation/slurm-15466799_5.out
+    Ignored:    code/simulation/slurm-15466799_50.out
+    Ignored:    code/simulation/slurm-15466799_51.out
+    Ignored:    code/simulation/slurm-15466799_52.out
+    Ignored:    code/simulation/slurm-15466799_53.out
+    Ignored:    code/simulation/slurm-15466799_54.out
+    Ignored:    code/simulation/slurm-15466799_55.out
+    Ignored:    code/simulation/slurm-15466799_56.out
+    Ignored:    code/simulation/slurm-15466799_57.out
+    Ignored:    code/simulation/slurm-15466799_58.out
+    Ignored:    code/simulation/slurm-15466799_59.out
+    Ignored:    code/simulation/slurm-15466799_6.out
+    Ignored:    code/simulation/slurm-15466799_60.out
+    Ignored:    code/simulation/slurm-15466799_61.out
+    Ignored:    code/simulation/slurm-15466799_62.out
+    Ignored:    code/simulation/slurm-15466799_63.out
+    Ignored:    code/simulation/slurm-15466799_64.out
+    Ignored:    code/simulation/slurm-15466799_65.out
+    Ignored:    code/simulation/slurm-15466799_66.out
+    Ignored:    code/simulation/slurm-15466799_67.out
+    Ignored:    code/simulation/slurm-15466799_68.out
+    Ignored:    code/simulation/slurm-15466799_69.out
+    Ignored:    code/simulation/slurm-15466799_7.out
+    Ignored:    code/simulation/slurm-15466799_70.out
+    Ignored:    code/simulation/slurm-15466799_71.out
+    Ignored:    code/simulation/slurm-15466799_72.out
+    Ignored:    code/simulation/slurm-15466799_73.out
+    Ignored:    code/simulation/slurm-15466799_74.out
+    Ignored:    code/simulation/slurm-15466799_75.out
+    Ignored:    code/simulation/slurm-15466799_76.out
+    Ignored:    code/simulation/slurm-15466799_77.out
+    Ignored:    code/simulation/slurm-15466799_78.out
+    Ignored:    code/simulation/slurm-15466799_79.out
+    Ignored:    code/simulation/slurm-15466799_8.out
+    Ignored:    code/simulation/slurm-15466799_80.out
+    Ignored:    code/simulation/slurm-15466799_81.out
+    Ignored:    code/simulation/slurm-15466799_82.out
+    Ignored:    code/simulation/slurm-15466799_83.out
+    Ignored:    code/simulation/slurm-15466799_84.out
+    Ignored:    code/simulation/slurm-15466799_85.out
+    Ignored:    code/simulation/slurm-15466799_86.out
+    Ignored:    code/simulation/slurm-15466799_87.out
+    Ignored:    code/simulation/slurm-15466799_88.out
+    Ignored:    code/simulation/slurm-15466799_89.out
+    Ignored:    code/simulation/slurm-15466799_9.out
+    Ignored:    code/simulation/slurm-15466799_90.out
+    Ignored:    code/simulation/slurm-15466799_91.out
+    Ignored:    code/simulation/slurm-15466799_92.out
+    Ignored:    code/simulation/slurm-15466799_93.out
+    Ignored:    code/simulation/slurm-15466799_94.out
+    Ignored:    code/simulation/slurm-15466799_95.out
+    Ignored:    code/simulation/slurm-15466799_96.out
+    Ignored:    code/simulation/slurm-15466799_97.out
+    Ignored:    code/simulation/slurm-15466799_98.out
+    Ignored:    code/simulation/slurm-15466799_99.out
+    Ignored:    code/simulation/slurm-15478249_201.out
+    Ignored:    code/simulation/slurm-15478249_202.out
+    Ignored:    code/simulation/slurm-15478249_203.out
+    Ignored:    code/simulation/slurm-15478249_204.out
+    Ignored:    code/simulation/slurm-15478249_205.out
+    Ignored:    code/simulation/slurm-15478249_206.out
+    Ignored:    code/simulation/slurm-15478249_207.out
+    Ignored:    code/simulation/slurm-15478249_208.out
+    Ignored:    code/simulation/slurm-15478249_209.out
+    Ignored:    code/simulation/slurm-15478249_210.out
+    Ignored:    code/simulation/slurm-15478249_211.out
+    Ignored:    code/simulation/slurm-15478249_212.out
+    Ignored:    code/simulation/slurm-15478249_213.out
+    Ignored:    code/simulation/slurm-15478249_214.out
+    Ignored:    code/simulation/slurm-15478249_215.out
+    Ignored:    code/simulation/slurm-15478249_216.out
+    Ignored:    code/simulation/slurm-15478249_217.out
+    Ignored:    code/simulation/slurm-15478249_218.out
+    Ignored:    code/simulation/slurm-15478249_219.out
+    Ignored:    code/simulation/slurm-15478249_220.out
+    Ignored:    code/simulation/slurm-15478249_221.out
+    Ignored:    code/simulation/slurm-15478249_222.out
+    Ignored:    code/simulation/slurm-15478249_223.out
+    Ignored:    code/simulation/slurm-15478249_224.out
+    Ignored:    code/simulation/slurm-15478249_225.out
+    Ignored:    code/simulation/slurm-15478249_226.out
+    Ignored:    code/simulation/slurm-15478249_227.out
+    Ignored:    code/simulation/slurm-15478249_228.out
+    Ignored:    code/simulation/slurm-15478249_229.out
+    Ignored:    code/simulation/slurm-15478249_230.out
+    Ignored:    code/simulation/slurm-15478249_231.out
+    Ignored:    code/simulation/slurm-15478249_232.out
+    Ignored:    code/simulation/slurm-15478249_233.out
+    Ignored:    code/simulation/slurm-15478249_234.out
+    Ignored:    code/simulation/slurm-15478249_235.out
+    Ignored:    code/simulation/slurm-15478249_236.out
+    Ignored:    code/simulation/slurm-15478249_237.out
+    Ignored:    code/simulation/slurm-15478249_238.out
+    Ignored:    code/simulation/slurm-15478249_239.out
+    Ignored:    code/simulation/slurm-15478249_240.out
+    Ignored:    code/simulation/slurm-15530400.out
+    Ignored:    code/simulation/summarize.Rout
+    Ignored:    data/annotation/hg38/gencode.v33.annotation.gtf.gz
+    Ignored:    data/annotation/mm39/
+    Ignored:    data/lung-ont/220928_dge.rds
+    Ignored:    data/lung/fastq/
+    Ignored:    data/lung/index-kallisto/
+    Ignored:    data/lung/index-subread/
+    Ignored:    data/lung/index/
+    Ignored:    ignore/
+    Ignored:    misc/
+    Ignored:    output/lung/
+    Ignored:    output/simulation/
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/lung.Rmd</code>) and HTML
+(<code>docs/lung.html</code>) files. If you’ve configured a remote Git
+repository (see <code>?wflow_git_remote</code>), click on the hyperlinks
+in the table below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/531a9f8317a6ebb9c187cad1230b0dc06764ffc9/analysis/lung.Rmd" target="_blank">531a9f8</a>
+</td>
+<td>
+Pedro Baldoni
+</td>
+<td>
+2024-04-05
+</td>
+<td>
+Turning cat off
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/afc521e682705d1f7f0162dab48be1f82cee5203/analysis/lung.Rmd" target="_blank">afc521e</a>
+</td>
+<td>
+Pedro Baldoni
+</td>
+<td>
+2024-04-05
+</td>
+<td>
+Adding case study dataset Rmd
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<pre class="r"><code>knitr::opts_chunk$set(dev = &quot;png&quot;,
+                      dpi = 300,
+                      dev.args = list(type = &quot;cairo-png&quot;),
+                      root.dir = &#39;.&#39;,
+                      autodep = TRUE)
+
+options(knitr.kable.NA = &quot;-&quot;)</code></pre>
+<pre class="r"><code>library(knitr)
+library(data.table)
+library(ComplexHeatmap)
+library(AnnotationHub)
+library(ggplot2)
+library(ggupset)
+library(edgeR)
+library(patchwork)
+library(rtracklayer)
+library(magrittr)
+library(Gviz)
+library(png)
+library(csaw)
+library(lubridate)
+library(BiocParallel)
+devtools::load_all(&#39;../code/pkg&#39;)</code></pre>
+<pre class="r"><code>path.misc &lt;- file.path(&#39;../misc/lung.Rmd&#39;)
+dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
+
+path.lung &lt;- &quot;../output/lung&quot;
+path.bam &lt;- &#39;../output/lung/subread/alignment&#39;
+path.sim &lt;- 
+  file.path(&#39;../output/simulation/data/mm39/readlen-100/fc2&#39;,
+            &#39;paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1/&#39;)</code></pre>
+<pre class="r"><code>bs &lt;- 8
+bseq &lt;- seq(10,100,10)
+BPPARAM &lt;- BiocParallel::MulticoreParam(workers = 10,progressbar = TRUE)
+register(BPPARAM)</code></pre>
+</div>
+<div id="data-loading" class="section level2">
+<h2>Data loading</h2>
+<pre class="r"><code>ah &lt;- AnnotationHub()
+edb &lt;- ah[[&#39;AH78783&#39;]] # Ensembl version 99 relative to Gencode version 33</code></pre>
+<pre><code>loading from cache</code></pre>
+<pre><code>require(&quot;ensembldb&quot;)</code></pre>
+<pre class="r"><code>edb.names &lt;- c(&quot;TXIDVERSION&quot;,&quot;SYMBOL&quot;,&quot;TXBIOTYPE&quot;,
+               &quot;GENEIDVERSION&quot;,&quot;GENENAME&quot;,&quot;GENEBIOTYPE&quot;,&quot;ENTREZID&quot;)
+
+dt.anno &lt;- as.data.table(select(edb,keys(edb),edb.names))
+
+dt.anno.gene &lt;- 
+  dt.anno[,.(NTranscriptPerGene = .N),
+          by = c(&#39;GENEIDVERSION&#39;,&#39;GENEBIOTYPE&#39;,&#39;ENTREZID&#39;,&#39;GENENAME&#39;)]
+
+dt.anno.gene[,GeneOfInterest := 
+               GENEBIOTYPE %in% c(&#39;protein_coding&#39;,&#39;lncRNA&#39;) &amp; !is.na(ENTREZID)]</code></pre>
+<pre class="r"><code>gr &lt;- import(&quot;../data/annotation/hg38/gencode.v33.annotation.gtf.gz&quot;)
+gr$EntrezID &lt;- dt.anno$ENTREZID[match(gr$transcript_id,dt.anno$TXIDVERSION)]
+gr.tx &lt;- gr[gr$type == &#39;transcript&#39;]</code></pre>
+<pre class="r"><code>cs.gibbs &lt;- 
+  catchSalmon(list.dirs(file.path(path.lung,&#39;salmon-gibbs&#39;),recursive = FALSE))</code></pre>
+<pre><code>Reading ../output/lung/salmon-gibbs/GSM5255695, 227223 transcripts, 100 gibbs samples
+Reading ../output/lung/salmon-gibbs/GSM5255696, 227223 transcripts, 100 gibbs samples
+Reading ../output/lung/salmon-gibbs/GSM5255697, 227223 transcripts, 100 gibbs samples
+Reading ../output/lung/salmon-gibbs/GSM5255704, 227223 transcripts, 100 gibbs samples
+Reading ../output/lung/salmon-gibbs/GSM5255705, 227223 transcripts, 100 gibbs samples
+Reading ../output/lung/salmon-gibbs/GSM5255706, 227223 transcripts, 100 gibbs samples</code></pre>
+<pre class="r"><code>cs.gibbs$counts &lt;- 
+  cs.gibbs$counts[grepl(&quot;ENST&quot;,rownames(cs.gibbs$counts)),]
+cs.gibbs$annotation &lt;- 
+  cs.gibbs$annotation[grepl(&quot;ENST&quot;,rownames(cs.gibbs$annotation)),]
+rownames(cs.gibbs$counts) &lt;- 
+  rownames(cs.gibbs$annotation) &lt;- strsplit2(rownames(cs.gibbs$counts),&quot;\\|&quot;)[,1]
+colnames(cs.gibbs$counts) &lt;- basename(colnames(cs.gibbs$counts))
+cs.gibbs$annotation$TranscriptSymbol &lt;- 
+  gr.tx$transcript_name[match(rownames(cs.gibbs$annotation),gr.tx$transcript_id)]
+cs.gibbs$annotation$EntrezID &lt;- 
+  dt.anno$ENTREZID[match(rownames(cs.gibbs$annotation),dt.anno$TXIDVERSION)]
+cs.gibbs$annotation$GeneID &lt;- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.gibbs$annotation),dt.anno$TXIDVERSION)]
+cs.gibbs$annotation$GeneOfInterest &lt;- 
+  dt.anno.gene$GeneOfInterest[match(cs.gibbs$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]</code></pre>
+<pre class="r"><code>cs.boot &lt;- 
+  catchSalmon(list.dirs(file.path(path.lung,&#39;salmon-bootstrap/&#39;),recursive = FALSE))</code></pre>
+<pre><code>Reading ../output/lung/salmon-bootstrap//GSM5255695, 227223 transcripts, 100 bootstrap samples
+Reading ../output/lung/salmon-bootstrap//GSM5255696, 227223 transcripts, 100 bootstrap samples
+Reading ../output/lung/salmon-bootstrap//GSM5255697, 227223 transcripts, 100 bootstrap samples
+Reading ../output/lung/salmon-bootstrap//GSM5255704, 227223 transcripts, 100 bootstrap samples
+Reading ../output/lung/salmon-bootstrap//GSM5255705, 227223 transcripts, 100 bootstrap samples
+Reading ../output/lung/salmon-bootstrap//GSM5255706, 227223 transcripts, 100 bootstrap samples</code></pre>
+<pre class="r"><code>cs.boot$counts &lt;- cs.boot$counts[grepl(&quot;ENST&quot;,rownames(cs.boot$counts)),]
+cs.boot$annotation &lt;- 
+  cs.boot$annotation[grepl(&quot;ENST&quot;,rownames(cs.boot$annotation)),]
+rownames(cs.boot$counts) &lt;- 
+  rownames(cs.boot$annotation) &lt;- strsplit2(rownames(cs.boot$counts),&quot;\\|&quot;)[,1]
+colnames(cs.boot$counts) &lt;- 
+  basename(colnames(cs.boot$counts))
+cs.boot$annotation$TranscriptSymbol &lt;- 
+  gr.tx$transcript_name[match(rownames(cs.boot$annotation),gr.tx$transcript_id)]
+cs.boot$annotation$EntrezID &lt;- 
+  dt.anno$ENTREZID[match(rownames(cs.boot$annotation),dt.anno$TXIDVERSION)]
+cs.boot$annotation$GeneID &lt;- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.boot$annotation),dt.anno$TXIDVERSION)]
+cs.boot$annotation$GeneOfInterest &lt;- 
+  dt.anno.gene$GeneOfInterest[match(cs.boot$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]</code></pre>
+<pre class="r"><code>cs.kallisto &lt;- 
+  catchKallisto(list.dirs(file.path(path.lung,&#39;kallisto/&#39;),recursive = FALSE))</code></pre>
+<pre><code>Reading ../output/lung/kallisto//GSM5255695, 228072 transcripts, 100 bootstraps
+Reading ../output/lung/kallisto//GSM5255696, 228072 transcripts, 100 bootstraps
+Reading ../output/lung/kallisto//GSM5255697, 228072 transcripts, 100 bootstraps
+Reading ../output/lung/kallisto//GSM5255704, 228072 transcripts, 100 bootstraps
+Reading ../output/lung/kallisto//GSM5255705, 228072 transcripts, 100 bootstraps
+Reading ../output/lung/kallisto//GSM5255706, 228072 transcripts, 100 bootstraps</code></pre>
+<pre class="r"><code>cs.kallisto$counts &lt;- cs.kallisto$counts[grepl(&quot;ENST&quot;,rownames(cs.kallisto$counts)),]
+cs.kallisto$annotation &lt;- 
+  cs.kallisto$annotation[grepl(&quot;ENST&quot;,rownames(cs.kallisto$annotation)),]
+rownames(cs.kallisto$counts) &lt;- 
+  rownames(cs.kallisto$annotation) &lt;- strsplit2(rownames(cs.kallisto$counts),&quot;\\|&quot;)[,1]
+colnames(cs.kallisto$counts) &lt;- 
+  basename(colnames(cs.kallisto$counts))
+cs.kallisto$annotation$TranscriptSymbol &lt;- 
+  gr.tx$transcript_name[match(rownames(cs.kallisto$annotation),gr.tx$transcript_id)]
+cs.kallisto$annotation$EntrezID &lt;- 
+  dt.anno$ENTREZID[match(rownames(cs.kallisto$annotation),dt.anno$TXIDVERSION)]
+cs.kallisto$annotation$GeneID &lt;- 
+  dt.anno$GENEIDVERSION[match(rownames(cs.kallisto$annotation),dt.anno$TXIDVERSION)]
+cs.kallisto$annotation$GeneOfInterest &lt;- 
+  dt.anno.gene$GeneOfInterest[match(cs.kallisto$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
+
+cs.kallisto$counts &lt;- cs.kallisto$counts[match(rownames(cs.gibbs$counts),rownames(cs.kallisto$counts)),]
+cs.kallisto$annotation &lt;- cs.kallisto$annotation[match(rownames(cs.gibbs$annotation),rownames(cs.kallisto$annotation)),]</code></pre>
+<pre class="r"><code>targets &lt;- read.delim(&#39;../data/lung/misc/targets.txt&#39;)
+targets$GSM &lt;- strsplit2(targets$File1,&quot;_&quot;)[,1]
+targets &lt;- targets[match(basename(colnames(cs.gibbs$counts)),targets$GSM),]</code></pre>
+<pre class="r"><code>dte.raw &lt;- DGEList(counts = cs.gibbs$counts,
+                   samples = targets,
+                   genes = cs.gibbs$annotation)
+dte.raw$samples$group &lt;- dte.raw$samples$Group
+
+dte.gibbs &lt;- DGEList(counts = cs.gibbs$counts/cs.gibbs$annotation$Overdispersion,
+                     samples = targets,
+                     genes = cs.gibbs$annotation)
+dte.gibbs$samples$group &lt;- dte.gibbs$samples$Group
+
+
+dte.boot &lt;- DGEList(counts = cs.boot$counts/cs.boot$annotation$Overdispersion,
+                    samples = targets,
+                    genes = cs.boot$annotation)
+dte.boot$samples$group &lt;- dte.boot$samples$Group
+
+dte.kallisto &lt;- DGEList(counts = cs.kallisto$counts/cs.kallisto$annotation$Overdispersion,
+                        samples = targets,
+                        genes = cs.kallisto$annotation)
+dte.kallisto$samples$group &lt;- dte.kallisto$samples$Group</code></pre>
+<pre class="r"><code>log.salmon &lt;- readLines(&#39;../code/lung/salmon/slurm-15887027.out&#39;)
+log.salmon.boot &lt;- log.salmon[grepl(&quot;Timestamp Bootstrap&quot;,log.salmon)] %&gt;% 
+  strsplit2(.,&quot; &quot;) %&gt;%
+  as.data.table()
+log.salmon.gibbs &lt;- log.salmon[grepl(&quot;Timestamp Gibbs&quot;,log.salmon)] %&gt;% 
+  strsplit2(.,&quot; &quot;) %&gt;%
+  as.data.table()
+
+log.salmon.boot[,Diff := dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V8),V9)) - dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V5),V6))]
+
+log.salmon.gibbs[,Diff := dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V8),V9)) - dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V5),V6))]
+
+log.salmon.boot$Diff</code></pre>
+<pre><code>Time differences in mins
+[1] 19.16667 20.10000 18.25000 18.33333 37.96667 17.45000</code></pre>
+<pre class="r"><code>log.salmon.gibbs$Diff</code></pre>
+<pre><code>Time differences in mins
+[1]  3.800000  4.300000  3.633333  4.016667 13.333333  3.616667</code></pre>
+<pre class="r"><code>mean(log.salmon.boot$Diff)</code></pre>
+<pre><code>Time difference of 21.87778 mins</code></pre>
+<pre class="r"><code>mean(log.salmon.gibbs$Diff)</code></pre>
+<pre><code>Time difference of 5.45 mins</code></pre>
+<pre class="r"><code>log.kallisto &lt;- readLines(&#39;../code/lung/kallisto/slurm-16121443.out&#39;)
+log.kallisto.boot &lt;- log.kallisto[grepl(&quot;Timestamp Bootstrap&quot;,log.kallisto)] %&gt;% 
+  strsplit2(.,&quot; &quot;) %&gt;%
+  as.data.table()
+
+log.kallisto.boot[,Diff := dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V8),V9)) - dmy_hms(paste(gsub(&quot;/&quot;,&quot;-&quot;,V5),V6))]
+
+log.kallisto.boot$Diff</code></pre>
+<pre><code>Time differences in mins
+[1] 11.416667 11.533333  9.750000 10.316667 20.150000  8.633333</code></pre>
+<pre class="r"><code>mean(log.kallisto.boot$Diff)</code></pre>
+<pre><code>Time difference of 11.96667 mins</code></pre>
+</div>
+</div>
+<div id="data-analysis" class="section level1">
+<h1>Data analysis</h1>
+<div id="filtering" class="section level2">
+<h2>Filtering</h2>
+<pre class="r"><code>keep.raw &lt;- 
+  filterByExpr(dte.raw) &amp; 
+  (dte.raw$genes$GeneOfInterest == TRUE)
+
+keep.gibbs &lt;- 
+  filterByExpr(dte.gibbs) &amp; 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+keep.boot &lt;- 
+  filterByExpr(dte.boot) &amp; 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+keep.kallisto &lt;- 
+  filterByExpr(dte.kallisto) &amp; 
+  (dte.gibbs$genes$GeneOfInterest == TRUE)
+
+table(keep.gibbs,keep.boot)</code></pre>
+<pre><code>          keep.boot
+keep.gibbs  FALSE   TRUE
+     FALSE 197289    207
+     TRUE    2355  27212</code></pre>
+<pre class="r"><code>table(keep.gibbs,keep.kallisto)</code></pre>
+<pre><code>          keep.kallisto
+keep.gibbs  FALSE   TRUE
+     FALSE 195407   2089
+     TRUE    2033  27534</code></pre>
+<pre class="r"><code>dte.gibbs$genes$inBoot &lt;- keep.boot
+dte.boot$genes$inGibbs &lt;- keep.gibbs
+dte.kallisto$genes$inGibbs &lt;- keep.gibbs
+
+dte.raw.filtr &lt;- dte.raw[keep.raw,,keep.lib.sizes = FALSE]
+dte.gibbs.filtr &lt;- dte.gibbs[keep.gibbs,,keep.lib.sizes = FALSE]
+dte.boot.filtr &lt;- dte.boot[keep.boot,,keep.lib.sizes = FALSE]
+dte.kallisto.filtr &lt;- dte.kallisto[keep.kallisto,,keep.lib.sizes = FALSE]</code></pre>
+</div>
+<div id="normalization" class="section level2">
+<h2>Normalization</h2>
+<pre class="r"><code>dte.raw.filtr &lt;- normLibSizes(dte.raw.filtr)
+dte.raw.filtr$samples$norm.factors</code></pre>
+<pre><code>[1] 1.0818961 1.1109908 1.1021386 0.9612946 0.8559130 0.9174484</code></pre>
+<pre class="r"><code>dte.gibbs.filtr &lt;- normLibSizes(dte.gibbs.filtr)
+dte.gibbs.filtr$samples$norm.factors</code></pre>
+<pre><code>[1] 1.1091013 1.1313574 1.1300533 0.9419848 0.8378197 0.8935843</code></pre>
+<pre class="r"><code>dte.boot.filtr &lt;- normLibSizes(dte.boot.filtr)
+dte.boot.filtr$samples$norm.factors</code></pre>
+<pre><code>[1] 1.1080927 1.1315317 1.1307586 0.9412070 0.8382824 0.8939470</code></pre>
+<pre class="r"><code>dte.kallisto.filtr &lt;- normLibSizes(dte.kallisto.filtr)
+dte.kallisto.filtr$samples$norm.factors</code></pre>
+<pre><code>[1] 1.1118764 1.1360119 1.1301173 0.9448906 0.8345998 0.8883360</code></pre>
+</div>
+<div id="comparison-of-bootstrap--and-gibbs-based-rta"
+class="section level2">
+<h2>Comparison of Bootstrap- and Gibbs-based RTA</h2>
+<pre class="r"><code>isExpr &lt;- rowSums(dte.gibbs$counts) &gt; 0
+
+dt.scatter &lt;- data.table(TranscriptID = rownames(dte.gibbs)[isExpr],
+                         TranscriptSymbol = dte.gibbs$genes$TranscriptSymbol[isExpr],
+                         EntrezID = dte.gibbs$genes$EntrezID[isExpr],
+                         GeneID = dte.gibbs$genes$GeneID[isExpr],
+                         Kallisto.Bootstrap = dte.kallisto$genes$Overdispersion[isExpr],
+                         Salmon.Bootstrap = dte.boot$genes$Overdispersion[isExpr],
+                         Salmon.Gibbs = dte.gibbs$genes$Overdispersion[isExpr],
+                         Expr.Kallisto.Boot = aveLogCPM(dte.kallisto[isExpr,]),
+                         Expr.Salmon.Boot = aveLogCPM(dte.boot[isExpr,]),
+                         Expr.Salmon.Gibbs = aveLogCPM(dte.gibbs[isExpr,]))
+
+dt.scatter[,NTx := .N,by = &#39;GeneID&#39;]
+
+dt.scatter &lt;- dt.scatter[grepl(&quot;ENST&quot;,TranscriptID),]
+
+dt.scatter[,gibbs.salmon.boot.fit := .(loessFit(x = log2(Salmon.Bootstrap),
+                                                y = log2(Salmon.Gibbs))$fitted)]
+
+dt.scatter[,fc.expr.salmon.fit := .(loessFit(x = Expr.Salmon.Gibbs,
+                                             y = log2(Salmon.Bootstrap/Salmon.Gibbs))$fitted)]
+
+dt.scatter[,gibbs.kallisto.boot.fit := .(loessFit(x = log2(Kallisto.Bootstrap),
+                                                  y = log2(Salmon.Gibbs))$fitted)]
+
+dt.scatter[,fc.expr.kallisto.fit := .(loessFit(x = Expr.Salmon.Gibbs,
+                                               y = log2(Kallisto.Bootstrap/Salmon.Gibbs))$fitted)]</code></pre>
+<pre class="r"><code>fig.scatter.salmon &lt;- ggplot(data = dt.scatter,aes(x = log2(Salmon.Bootstrap))) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
+  geom_line(aes(y = gibbs.salmon.boot.fit),linewidth = 0.5,color = &#39;#3366FF&#39;) +
+  geom_abline(intercept = 0,slope = 1,color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(x = &#39;Bootstrap RTA (log2 scale)&#39;,y = &#39;Gibbs RTA (log2 scale)&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.rtama.salmon &lt;- 
+  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Bootstrap/Salmon.Gibbs))) +
+  geom_line(aes(y = fc.expr.salmon.fit),linewidth = 0.5,color = &#39;#3366FF&#39;) +
+  geom_abline(intercept = 0,slope = 0,color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
+  scale_y_continuous(limits = c(-5.5,5.5)) +
+  labs(x = &#39;Average log2 CPM&#39;,y = &#39;RTA log2 fold-change&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.salmon</code></pre>
+<p><img src="figure/lung.Rmd/lung_boot_vs_gibbs_salmon-1.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>fig.rtama.salmon</code></pre>
+<p><img src="figure/lung.Rmd/lung_boot_vs_gibbs_salmon-2.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>fig.scatter.kallisto &lt;- ggplot(data = dt.scatter,aes(x = log2(Kallisto.Bootstrap))) +
+  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
+  geom_line(aes(y = gibbs.kallisto.boot.fit),linewidth = 0.5,color = &#39;#3366FF&#39;) +
+  geom_abline(intercept = 0,slope = 1,color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(x = &#39;Bootstrap RTA (log2 scale)&#39;,y = &#39;Gibbs RTA (log2 scale)&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.rtama.kallisto &lt;- 
+  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
+  geom_point(alpha = 0.05,aes(y = log2(Kallisto.Bootstrap/Salmon.Gibbs))) +
+  geom_line(aes(y = fc.expr.kallisto.fit),linewidth = 0.5,color = &#39;#3366FF&#39;) +
+  geom_abline(intercept = 0,slope = 0,color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
+  scale_y_continuous(limits = c(-7,7)) +
+  labs(x = &#39;Average log2 CPM&#39;,y = &#39;RTA log2 fold-change&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.kallisto</code></pre>
+<p><img src="figure/lung.Rmd/lung_boot_vs_gibbs_kallisto-1.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>fig.rtama.kallisto</code></pre>
+<p><img src="figure/lung.Rmd/lung_boot_vs_gibbs_kallisto-2.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>dt.scatter[,summary(Kallisto.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+ 0.01096  0.95873  1.07933  1.20666  1.31906 27.08896 </code></pre>
+<pre class="r"><code>dt.scatter[,summary(Salmon.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+ 0.04562  1.00397  1.15177  1.43484  1.57473 38.06237 </code></pre>
+<pre class="r"><code>dt.scatter[,table(Expr.Salmon.Gibbs &lt;= 1)]</code></pre>
+<pre><code>
+ FALSE   TRUE 
+ 18764 119024 </code></pre>
+<pre class="r"><code>dt.scatter[,table(Expr.Salmon.Gibbs &lt;= 1)/.N]</code></pre>
+<pre><code>
+    FALSE      TRUE 
+0.1361802 0.8638198 </code></pre>
+<pre class="r"><code>dt.scatter[Expr.Salmon.Gibbs &lt;= 1,summary(Kallisto.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+ 0.01096  0.96997  1.10191  1.23322  1.36242 25.63485 </code></pre>
+<pre class="r"><code>dt.scatter[Expr.Salmon.Gibbs &lt;= 1,summary(Salmon.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+ 0.04562  1.02251  1.20356  1.49783  1.69422 38.06237 </code></pre>
+<pre class="r"><code>dt.scatter[Expr.Salmon.Gibbs &gt;1,summary(Kallisto.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.1176  0.9140  1.0000  1.0382  1.1030 27.0890 </code></pre>
+<pre class="r"><code>dt.scatter[Expr.Salmon.Gibbs &gt;1,summary(Salmon.Bootstrap/Salmon.Gibbs)]</code></pre>
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.09213 0.95359 1.01712 1.03524 1.09383 5.11494 </code></pre>
+</div>
+<div id="assessing-convergence-of-rta-estimates" class="section level2">
+<h2>Assessing convergence of RTA estimates</h2>
+<pre class="r"><code>alcpm &lt;- dt.scatter$Expr.Salmon.Gibbs
+names(alcpm) &lt;- dt.scatter$TranscriptID
+
+alcpm.cut &lt;- cut(alcpm,breaks = c(-Inf, 1, Inf),
+                 labels = c(&quot;Avg. Log CPM &lt;= 1&quot;, &quot;Avg. Log CPM &gt; 1&quot;))
+names(alcpm.cut) &lt;- names(alcpm)</code></pre>
+<pre class="r"><code>foo &lt;- function(b){
+  cs.kallisto &lt;- 
+    catchKallisto2(paths = list.dirs(file.path(path.lung,&#39;kallisto&#39;),recursive = FALSE),
+                   nboot.max = b)
+  cs.boot &lt;- 
+    catchSalmon2(paths = list.dirs(file.path(path.lung,&#39;salmon-bootstrap&#39;),recursive = FALSE),
+                 nboot.max = b)
+  cs.gibbs &lt;- 
+    catchSalmon2(paths = list.dirs(file.path(path.lung,&#39;salmon-gibbs&#39;),recursive = FALSE),
+                 nboot.max = b)
+  
+  rownames(cs.kallisto$annotation) &lt;- strsplit2(rownames(cs.kallisto$annotation),&quot;\\|&quot;)[,1]
+  rownames(cs.boot$annotation) &lt;- strsplit2(rownames(cs.boot$annotation),&quot;\\|&quot;)[,1]
+  rownames(cs.gibbs$annotation) &lt;- strsplit2(rownames(cs.gibbs$annotation),&quot;\\|&quot;)[,1]
+  
+  cs.kallisto$annotation &lt;- cs.kallisto$annotation[match(rownames(cs.gibbs$annotation),rownames(cs.kallisto$annotation)),]
+  cs.kallisto$counts &lt;- cs.kallisto$counts[match(rownames(cs.gibbs$counts),rownames(cs.kallisto$counts)),]
+  
+  stopifnot(all.equal(rownames(cs.kallisto$annotation),rownames(cs.gibbs$annotation)))
+  stopifnot(all.equal(rownames(cs.boot$annotation),rownames(cs.gibbs$annotation)))
+  
+  IsExpressed &lt;- (rowSums(cs.gibbs$counts) &gt; 0)
+  rn &lt;- rownames(cs.gibbs$annotation)[IsExpressed]
+  
+  rta &lt;- data.table(ResamplingNum = b,
+                    AveLogCPM = alcpm.cut[match(rn,names(alcpm.cut))],
+                    TranscriptID = rn,
+                    Kallisto.Boot = cs.kallisto$annotation$Overdispersion[IsExpressed],
+                    Salmon.Boot = cs.boot$annotation$Overdispersion[IsExpressed],
+                    Salmon.Gibbs = cs.gibbs$annotation$Overdispersion[IsExpressed])
+  
+  rta &lt;- rta[grepl(&quot;ENST&quot;,TranscriptID),]
+  
+  return(rta)
+}
+
+rta.out &lt;- lapply(bseq,foo)
+df.rta &lt;- rbindlist(rta.out)</code></pre>
+<pre class="r"><code>df.rta.reference &lt;- df.rta[ResamplingNum == 100,c(&#39;TranscriptID&#39;,&#39;Kallisto.Boot&#39;,&#39;Salmon.Boot&#39;,&#39;Salmon.Gibbs&#39;)]
+setnames(df.rta.reference,
+         old = c(&#39;Kallisto.Boot&#39;,&#39;Salmon.Boot&#39;,&#39;Salmon.Gibbs&#39;),
+         new = c(&#39;Ref.Kallisto.Bootstrap&#39;,&#39;Ref.Salmon.Bootstrap&#39;,&#39;Ref.Salmon.Gibbs&#39;))
+
+df.rta &lt;- merge(df.rta,df.rta.reference,all.x = TRUE,sort = FALSE,by = c(&#39;TranscriptID&#39;))
+df.rta$Kallisto.Bootstrap &lt;- df.rta$Kallisto.Boot/df.rta$Ref.Kallisto.Bootstrap
+df.rta$Salmon.Bootstrap &lt;- df.rta$Salmon.Boot/df.rta$Ref.Salmon.Bootstrap
+df.rta$Salmon.Gibbs &lt;- df.rta$Salmon.Gibbs/df.rta$Ref.Salmon.Gibbs
+
+df.rta.melt &lt;- melt(df.rta,
+                    id.vars = c(&#39;TranscriptID&#39;,&#39;ResamplingNum&#39;,&#39;AveLogCPM&#39;),
+                    measure.vars = c(&#39;Kallisto.Bootstrap&#39;,&#39;Salmon.Bootstrap&#39;,&#39;Salmon.Gibbs&#39;),
+                    value.name = &#39;Overdispersion&#39;,
+                    variable.name = &#39;Type&#39;)
+
+df.rta.melt$Type %&lt;&gt;% factor(levels = c(&#39;Kallisto.Bootstrap&#39;,&#39;Salmon.Bootstrap&#39;,&#39;Salmon.Gibbs&#39;),
+                             labels = c(&#39;kallisto-Bootstrap&#39;,&#39;Salmon-Bootstrap&#39;,&#39;Salmon-Gibbs&#39;))
+df.rta.melt$AveLogCPM %&lt;&gt;%
+  factor(levels = levels(.),labels = c(&quot;Average log2 CPM \u2264 1&quot;,&quot;Average log2 CPM &gt; 1&quot;))</code></pre>
+<pre class="r"><code>df.rta.melt.salmon  &lt;- df.rta.melt[Type != &#39;kallisto-Bootstrap&#39;,]
+df.rta.melt.salmon$Type %&lt;&gt;%
+  droplevels() %&lt;&gt;%
+  factor(levels = levels(.),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+
+fig.resampling.salmon &lt;- 
+  ggplot(data = df.rta.melt.salmon,
+         aes(x = ResamplingNum,y = log2(Overdispersion))) +
+  facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
+  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_hline(yintercept = c(0),color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
+  scale_x_continuous(breaks = seq(10,100,10)) +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = &#39;Number of resamples&#39;, y = &#39;RTA log2 fold-change&#39;,color = NULL,fill = NULL)
+fig.resampling.salmon</code></pre>
+<p><img src="figure/lung.Rmd/lung_conv_df_salmon-1.png" width="1650" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>df.rta.melt.kallisto  &lt;- df.rta.melt[Type != &#39;Salmon-Bootstrap&#39;,]
+df.rta.melt.kallisto$Type %&lt;&gt;%
+  droplevels() %&lt;&gt;%
+  factor(levels = levels(.),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+
+fig.resampling.kallisto &lt;- 
+  ggplot(data = df.rta.melt.kallisto[Type != &#39;Salmon-Bootstrap&#39;,],
+         aes(x = ResamplingNum,y = log2(Overdispersion))) +
+  facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
+  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_hline(yintercept = c(0),color = &#39;red&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
+  scale_x_continuous(breaks = seq(10,100,10)) +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = &#39;Number of resamples&#39;, y = &#39;RTA log2 fold-change&#39;,color = NULL,fill = NULL)
+fig.resampling.kallisto</code></pre>
+<p><img src="figure/lung.Rmd/lung_conv_df_kallisto-1.png" width="1650" style="display: block; margin: auto;" /></p>
+</div>
+<div id="differential-transcript-expression" class="section level2">
+<h2>Differential transcript expression</h2>
+<pre class="r"><code>design &lt;- model.matrix(~group,data = dte.boot$samples)
+
+dte.raw.filtr.legacy &lt;- estimateDisp(dte.raw.filtr,design = design)
+dte.boot.filtr.legacy &lt;- estimateDisp(dte.boot.filtr,design = design)
+dte.gibbs.filtr.legacy &lt;- estimateDisp(dte.gibbs.filtr,design = design)
+
+fit.boot.edgeR.legacy &lt;- glmQLFit(dte.boot.filtr.legacy,design = design,legacy = TRUE)
+fit.gibbs.edgeR.legacy &lt;- glmQLFit(dte.gibbs.filtr.legacy,design = design,legacy = TRUE)
+fit.boot.edgeR.v4 &lt;- glmQLFit(dte.boot.filtr,design,legacy = FALSE)
+fit.gibbs.edgeR.v4 &lt;- glmQLFit(dte.gibbs.filtr,design,legacy = FALSE)
+
+qlf.boot.edgeR.legacy &lt;- glmQLFTest(fit.boot.edgeR.legacy,coef = 2)
+qlf.gibbs.edgeR.legacy &lt;- glmQLFTest(fit.gibbs.edgeR.legacy,coef = 2)
+qlf.boot.edgeR.v4 &lt;- glmQLFTest(fit.boot.edgeR.v4,coef = 2)
+qlf.gibbs.edgeR.v4 &lt;- glmQLFTest(fit.gibbs.edgeR.v4,coef = 2)
+
+out.boot.edgeR.legacy &lt;- topTags(qlf.boot.edgeR.legacy,n = Inf)
+out.gibbs.edgeR.legacy &lt;- topTags(qlf.gibbs.edgeR.legacy,n = Inf)
+out.boot.edgeR.v4 &lt;- topTags(qlf.boot.edgeR.v4,n = Inf)
+out.gibbs.edgeR.v4 &lt;- topTags(qlf.gibbs.edgeR.v4,n = Inf)
+
+dt.boot.edgeR.legacy &lt;- decideTests(qlf.boot.edgeR.legacy)
+dt.gibbs.edgeR.legacy &lt;- decideTests(qlf.gibbs.edgeR.legacy)
+dt.boot.edgeR.v4 &lt;- decideTests(qlf.boot.edgeR.v4)
+dt.gibbs.edgeR.v4 &lt;- decideTests(qlf.gibbs.edgeR.v4)</code></pre>
+<pre class="r"><code>summary(dt.boot.edgeR.legacy)</code></pre>
+<pre><code>       groupHCC827
+Down          9625
+NotSig        8720
+Up            9074</code></pre>
+<pre class="r"><code>summary(dt.gibbs.edgeR.legacy)</code></pre>
+<pre><code>       groupHCC827
+Down         10124
+NotSig       10016
+Up            9427</code></pre>
+<pre class="r"><code>summary(dt.boot.edgeR.v4)</code></pre>
+<pre><code>       groupHCC827
+Down          9728
+NotSig        8538
+Up            9153</code></pre>
+<pre class="r"><code>summary(dt.gibbs.edgeR.v4)</code></pre>
+<pre><code>       groupHCC827
+Down         10340
+NotSig        9648
+Up            9579</code></pre>
+<pre class="r"><code>plotQLDisp2 &lt;- function (glmfit, xlab = &quot;Average Log2 CPM&quot;, ylab = &quot;Quarter-Root Mean Deviance&quot;, pch = 16, cex = 0.2, col.shrunk = &quot;red&quot;, col.trend = &quot;blue&quot;, col.raw = &quot;black&quot;, fontsize = 8,...) 
+{
+  if (is.null(glmfit$var.post)) 
+    stop(&quot;need to run glmQLFit before plotQLDisp&quot;)
+  A &lt;- glmfit$AveLogCPM
+  if (is.null(A)) 
+    A &lt;- aveLogCPM(glmfit)
+  if (is.null(glmfit$df.residual.zeros)) {
+    df.residual &lt;- glmfit$df.residual.adj
+    deviance &lt;- glmfit$deviance.adj
+  }
+  else {
+    df.residual &lt;- glmfit$df.residual.zeros
+    deviance &lt;- glmfit$deviance
+  }
+  s2 &lt;- deviance/df.residual
+  s2[df.residual &lt; 1e-08] &lt;- 0
+  plot(A, sqrt(sqrt(s2)), xlab = xlab, ylab = ylab, pch = pch, 
+       cex = cex, col = col.raw, cex.lab = fontsize/12,
+       cex.axis = fontsize/12, ...)
+  points(A, sqrt(sqrt(glmfit$var.post)), pch = pch, cex = cex, 
+         col = col.shrunk)
+  if (identical(length(glmfit$var.prior), 1L)) {
+    abline(h = sqrt(sqrt(glmfit$var.prior)), col = col.trend)
+  }
+  else {
+    o &lt;- order(A)
+    lines(A[o], sqrt(sqrt(glmfit$var.prior[o])), col = col.trend, 
+          lwd = 2)
+  }
+  legend(&quot;topright&quot;, lty = c(-1, -1, 1), pch = c(pch, pch, 
+                                                 -1), col = c(col.raw, col.shrunk, col.trend), pt.cex = 0.7,
+         cex = fontsize/12,
+         lwd = 2, legend = c(&quot;Raw&quot;, &quot;Squeezed&quot;, &quot;Trend&quot;))
+  invisible(list(x = A, y = sqrt(sqrt(s2))))
+}
+
+fig.ql &lt;- wrap_elements(full = ~ plotQLDisp2(qlf.gibbs.edgeR.legacy))
+fig.ql</code></pre>
+<p><img src="figure/lung.Rmd/lung_qldisp-1.png" width="1500" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>file.ql &lt;- tempfile(&quot;ql&quot;,fileext = &#39;.png&#39;)
+png(file.ql,width = 5,height = 4,units = &#39;in&#39;,res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.ql
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.ql &lt;- readPNG(file.ql, native = TRUE)</code></pre>
+</div>
+<div id="contrasting-dte-between-bootstrap-and-gibbs-pipelines"
+class="section level2">
+<h2>Contrasting DTE between bootstrap and Gibbs pipelines</h2>
+<pre class="r"><code>dt.dte &lt;- data.table(TranscriptID = rownames(dte.boot)[rownames(dte.boot) %in% gr.tx$transcript_id])
+dt.dte[,edgeR.boot.legacy := TranscriptID %in% rownames(dt.boot.edgeR.legacy)[dt.boot.edgeR.legacy !=0]]
+dt.dte[,edgeR.gibbs.legacy := TranscriptID %in% rownames(dt.gibbs.edgeR.legacy)[dt.gibbs.edgeR.legacy !=0]]
+dt.dte[,edgeR.boot.v4 := TranscriptID %in% rownames(dt.boot.edgeR.v4)[dt.boot.edgeR.v4 !=0]]
+dt.dte[,edgeR.gibbs.v4 := TranscriptID %in% rownames(dt.gibbs.edgeR.v4)[dt.gibbs.edgeR.v4 !=0]]
+
+dt.upset &lt;- dt.dte[,2:5]*1
+colnames(dt.upset) &lt;- c(&#39;edgeR-v3 (bootstrap)&#39;,
+                        &#39;edgeR-v3 (Gibbs)&#39;,
+                        &#39;edgeR-v4 (bootstrap)&#39;,
+                        &#39;edgeR-v4 (Gibbs)&#39;)
+
+dt.upset$Group &lt;- lapply(1:nrow(dt.upset),function(x){
+  colnames(dt.upset)[which(dt.upset[x,] != 0)]
+})
+
+i &lt;- rowSums(dt.upset[,1:4]) &gt;0 
+
+fig.upset &lt;- ggplot(data = dt.upset[i,],aes(x=Group)) +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs)) +
+  geom_bar() +
+  geom_text(stat=&#39;count&#39;,
+            aes(label=after_stat(count)),
+            vjust=-1,size = bs/.pt) +
+  scale_x_upset() +
+  scale_y_continuous(limits = c(0, 20000)) +
+  labs(x = NULL,y = &quot;DE Transcripts&quot;)
+
+file.upset &lt;- tempfile(&quot;upset&quot;,fileext = &#39;.png&#39;)
+png(file.upset,width = 5,height = 4,units = &#39;in&#39;,res = 300)
+fig.upset
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.upset</code></pre>
+<p><img src="figure/lung.Rmd/lung_upset-1.png" width="1500" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>fig.upset &lt;- readPNG(file.upset, native = TRUE)</code></pre>
+<pre class="r"><code>tx.gibbsonly &lt;- 
+  dt.dte[edgeR.boot.v4 == FALSE &amp; 
+           edgeR.gibbs.v4 == TRUE,TranscriptID]
+tx.bootonly &lt;- 
+  dt.dte[edgeR.boot.v4 == TRUE &amp; 
+           edgeR.gibbs.v4 == FALSE,TranscriptID]
+
+table(tx.gibbsonly %in% rownames(dte.boot.filtr))</code></pre>
+<pre><code>
+FALSE  TRUE 
+ 1303    58 </code></pre>
+<pre class="r"><code>table(tx.bootonly %in% rownames(dte.gibbs.filtr))</code></pre>
+<pre><code>
+FALSE  TRUE 
+  106   217 </code></pre>
+<pre class="r"><code>dt.scatter$IsGibbsOnly &lt;- dt.scatter$TranscriptID %in% tx.gibbsonly
+dt.scatter$IsBootOnly &lt;- dt.scatter$TranscriptID %in% tx.bootonly
+
+fig.scatter.gibbs &lt;- ggplot(data = dt.scatter[IsGibbsOnly == FALSE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs))) +
+  geom_point(shape = 19,alpha = 0.1) +
+  geom_point(inherit.aes = FALSE,data = dt.scatter[IsGibbsOnly == TRUE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs)),shape = 19,alpha = 1,color = &#39;red&#39;) +
+  geom_abline(intercept = 0,slope = 1,color = &#39;red&#39;,linetype = &#39;dashed&#39;) +
+  scale_y_continuous(limits = c(0,3)) +
+  scale_x_continuous(limits = c(0,3)) +
+  labs(x = &#39;Bootstrap RTA (log10 scale)&#39;,y = &#39;Gibbs RTA (log10 scale)&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.gibbs</code></pre>
+<p><img src="figure/lung.Rmd/lung_bootonly-1.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>fig.scatter.boot &lt;- ggplot(data = dt.scatter[IsGibbsOnly == FALSE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs))) +
+  geom_point(shape = 19,alpha = 0.1) +
+  geom_point(inherit.aes = FALSE,data = dt.scatter[IsBootOnly == TRUE,],aes(x = log10(Salmon.Bootstrap),y = log10(Salmon.Gibbs)),shape = 19,alpha = 1,color = &#39;red&#39;) +
+  geom_abline(intercept = 0,slope = 1,color = &#39;red&#39;,linetype = &#39;dashed&#39;) +
+  scale_y_continuous(limits = c(0,3)) +
+  scale_x_continuous(limits = c(0,3)) +
+  labs(x = &#39;Bootstrap RTA (log10 scale)&#39;,y = &#39;Gibbs RTA (log10 scale)&#39;)+
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(size = bs),
+        axis.title = element_text(size = bs))
+
+fig.scatter.boot</code></pre>
+<p><img src="figure/lung.Rmd/lung_bootonly-2.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>lcpm &lt;- cpm(dte.gibbs.filtr,log = T)
+colnames(lcpm) &lt;- dte.gibbs.filtr$samples$Sample
+
+makeplot.density &lt;- function(object, group = NULL, col = NULL, main = NULL, legend = &quot;topleft&quot;, fontsize = 8, ...){
+  
+  E &lt;- as.matrix(object)
+  narray &lt;- ncol(E)
+  if (is.null(group)) 
+    group &lt;- colnames(E)
+  if (is.null(group)) 
+    group &lt;- 1:narray
+  group &lt;- as.factor(group)
+  ngroup &lt;- nlevels(group)
+  if (is.null(col)) 
+    col &lt;- 1:ngroup
+  col &lt;- rep(col, length = ngroup)
+  if (is.logical(legend)) {
+    legend.position &lt;- &quot;topleft&quot;
+  }
+  else {
+    legend.position &lt;- as.character(legend)
+    legend &lt;- TRUE
+  }
+  legend.position &lt;- match.arg(legend.position, c(&quot;bottomright&quot;, 
+                                                  &quot;bottom&quot;, &quot;bottomleft&quot;, &quot;left&quot;, &quot;topleft&quot;, &quot;top&quot;, &quot;topright&quot;, 
+                                                  &quot;right&quot;, &quot;center&quot;))
+  arraycol &lt;- group
+  levels(arraycol) &lt;- col
+  arraycol &lt;- as.vector(arraycol)
+  npoint &lt;- 512
+  X &lt;- Y &lt;- matrix(0, npoint, narray)
+  for (a in 1:ncol(E)) {
+    d &lt;- density(E[, a], n = npoint, na.rm = TRUE, ...)
+    X[, a] &lt;- d$x
+    Y[, a] &lt;- d$y
+  }
+  matplot(X, Y, xlab = &quot;Log CPM&quot;, ylab = &quot;Density&quot;, main = main, 
+          type = &quot;l&quot;, col = arraycol, lwd = 2, lty = 1,
+          cex.lab = fontsize/12,
+          cex.axis = fontsize/12,
+          ylim = c(-0.01,0.25))
+  if (legend &amp;&amp; ngroup &gt; 1) 
+    legend(legend.position, lwd = 2, legend = levels(group), 
+           col = col)
+  points(x = alcpm[names(alcpm) %in% tx.gibbsonly],
+         y = rep(-0.005,length(tx.gibbsonly)),
+         pch = 4,cex = 0.5)
+  legend(x = 3,y = 0.24,
+         legend = c(&#39;H1975&#39;,&#39;HCC827&#39;),
+         col = c(1:2),
+         bty = &#39;n&#39;,
+         lwd = c(2,2),
+         cex = fontsize/12)
+  legend(x = 3,y = 0.20,
+         legend = c(&#39;Gibbs-specific DE transcripts&#39;),
+         bty = &#39;n&#39;,
+         pch = 4,
+         cex = fontsize/12)
+}
+
+summary(alcpm[names(alcpm) %in% tx.gibbsonly])</code></pre>
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-1.4843 -0.7876 -0.5377 -0.4718 -0.2755  3.9816 </code></pre>
+<pre class="r"><code>makeplot.density(object = lcpm,
+                 group = 
+                   dte.gibbs.filtr$samples$group,
+                 legend = FALSE)</code></pre>
+<p><img src="figure/lung.Rmd/lung_densities-1.png" width="1200" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>file.density &lt;- tempfile(&quot;density&quot;,fileext = &#39;.png&#39;)
+png(file.density,width = 4,height = 4,units = &#39;in&#39;,res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+makeplot.density(object = lcpm,
+                 group = 
+                   dte.gibbs.filtr$samples$group,
+                 legend = FALSE)
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.density &lt;- readPNG(file.density, native = TRUE)</code></pre>
+<pre class="r"><code>GK &lt;- getGeneKEGGLinks(species.KEGG = &quot;hsa&quot;)
+cancerGenes &lt;- GK$GeneID[GK$PathwayID %in% c(&#39;hsa05223&#39;,&#39;hsa05200&#39;)]
+interestGenes &lt;- dt.anno[TXIDVERSION %in% tx.gibbsonly,unique(ENTREZID)]
+
+interestGenes.cancer &lt;- interestGenes[interestGenes %in% cancerGenes]
+
+interestTx.cancer &lt;- gr.tx[gr.tx$transcript_id %in% tx.gibbsonly &amp; gr.tx$EntrezID %in% interestGenes.cancer]$transcript_id
+
+lcpm.scaled.cancer &lt;- t(scale(t(lcpm)))
+lcpm.scaled.cancer &lt;- lcpm.scaled.cancer[rownames(lcpm.scaled.cancer) %in% interestTx.cancer,]
+rownames(lcpm.scaled.cancer) &lt;- gr.tx$transcript_name[match(rownames(lcpm.scaled.cancer),gr.tx$transcript_id)]
+
+foo.heat &lt;- function(x,cluster_rows = TRUE, fontsize = 8,...){
+  Heatmap(matrix = x,
+          heatmap_legend_param = list(title = &#39;Expression&#39;,
+                                      title_position = &#39;topcenter&#39;,
+                                      direction = &quot;horizontal&quot;,
+                                      at = seq(-3,3,1),
+                                      title_gp = gpar(fontsize = fontsize),
+                                      labels_gp = gpar(fontsize = fontsize)),
+          cluster_rows = cluster_rows,
+          cluster_columns = FALSE,
+          row_names_gp = gpar(fontsize = fontsize),
+          column_names_gp = gpar(fontsize = fontsize),
+          col = c(&quot;blue&quot;, &quot;white&quot;, &quot;red&quot;),...) %&gt;%
+    draw(heatmap_legend_side = &quot;top&quot;)
+}
+
+foo.heat(lcpm.scaled.cancer)</code></pre>
+<p><img src="figure/lung.Rmd/lung_heatmap-1.png" width="1500" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>file.heat &lt;- tempfile(&quot;heat&quot;,fileext = &#39;.png&#39;)
+png(file.heat,width = 5,height = 12,units = &#39;in&#39;,res = 300)
+foo.heat(lcpm.scaled.cancer)
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.heat &lt;- readPNG(file.heat, native = TRUE)</code></pre>
+<pre class="r"><code>df.venn &lt;- data.frame(row.names = rownames(dte.boot))
+
+df.venn$boot.v3 &lt;- dt.boot.edgeR.legacy@.Data[match(rownames(df.venn),rownames(dt.boot.edgeR.legacy)),1]
+df.venn$gibbs.v4 &lt;- dt.gibbs.edgeR.v4@.Data[match(rownames(df.venn),rownames(dt.gibbs.edgeR.v4)),1]
+df.venn[is.na(df.venn)] &lt;- 0L
+
+make.venn &lt;- function (object, include = &quot;both&quot;, names = NULL, cex = c(1.5, 1, 0.7), lwd = 1, circle.col = NULL, counts.col = NULL, 
+                       show.include = NULL, ...) 
+{
+  include &lt;- as.character(include)
+  LenInc &lt;- min(length(include), 2)
+  if (is(object, &quot;VennCounts&quot;)) {
+    include &lt;- include[1]
+    LenInc &lt;- 1
+  }
+  else {
+    if (LenInc &gt; 1) 
+      z2 &lt;- vennCounts(object, include = include[2])[, 
+                                                     &quot;Counts&quot;]
+    object &lt;- vennCounts(object, include = include[1])
+  }
+  z &lt;- object[, &quot;Counts&quot;]
+  nsets &lt;- ncol(object) - 1
+  if (nsets &gt; 5) 
+    stop(&quot;Can&#39;t plot Venn diagram for more than 5 sets&quot;)
+  VennZone &lt;- object[, 1:nsets, drop = FALSE]
+  VennZone &lt;- apply(VennZone, 1, function(x) paste(x, sep = &quot;&quot;, collapse = &quot;&quot;))
+  names(z) &lt;- VennZone
+  if (length(include) == 2) 
+    names(z2) &lt;- VennZone
+  if (is.null(names)) 
+    names &lt;- colnames(object)[1:nsets]
+  FILL.COL &lt;- TRUE
+  if (is.null(circle.col)) {
+    circle.col &lt;- par(&quot;col&quot;)
+    FILL.COL &lt;- FALSE
+  }
+  if (length(circle.col) &lt; nsets) 
+    circle.col &lt;- rep_len(circle.col, length.out = nsets)
+  if (is.null(counts.col)) 
+    counts.col &lt;- par(&quot;col&quot;)
+  if (length(counts.col) &lt; LenInc) 
+    counts.col &lt;- rep_len(counts.col, length.out = LenInc)
+  if (is.null(show.include)) 
+    show.include &lt;- as.logical(LenInc - 1)
+  # old.par &lt;- par()$mar
+  # on.exit(par(mar = old.par))
+  # par(mar = mar)
+  plot(x = 0, y = 0, type = &quot;n&quot;, xlim = c(-2.8, 2.8), ylim = c(-2.35, 2.35), xlab = &quot;&quot;, ylab = &quot;&quot;, axes = FALSE, ...)
+  theta &lt;- 2 * pi * (0:360)/360
+  xcentres &lt;- switch(nsets, 0, c(-1, 1), c(-1, 1, 0))
+  ycentres &lt;- switch(nsets, 0, c(0, 0), c(1, 1, -2)/sqrt(3))
+  r &lt;- 1.5
+  xtext &lt;- switch(nsets, -1.2, c(-1.2, 1.2), c(-1.2, 1.2, 0))
+  ytext &lt;- switch(nsets, 1.8, c(1.8, 1.8), c(2.4, 2.4, -3))
+  for (circle in 1:nsets) {
+    if (!FILL.COL) 
+      lines(xcentres[circle] + r * cos(theta), ycentres[circle] + 
+              r * sin(theta), lwd = lwd, col = circle.col[circle])
+    if (FILL.COL) {
+      RGB &lt;- col2rgb(circle.col[circle])/255
+      ALPHA &lt;- 0.06
+      RGB.ALP &lt;- rgb(RGB[1, 1], RGB[2, 1], RGB[3, 1], 
+                     alpha = ALPHA)
+      polygon(xcentres[circle] + r * cos(theta), ycentres[circle] + 
+                r * sin(theta), border = circle.col[circle], 
+              lwd = lwd, col = RGB.ALP)
+    }
+    text(xtext[circle], ytext[circle], names[circle], cex = cex)
+  }
+  switch(nsets, rect(-3, -2.5, 3, 2.5), rect(-3, -2.5, 3, 2.5), rect(-3, -3.5, 3, 3.3))
+  showCounts &lt;- switch(nsets, function(counts, cex, adj, col, leg) {
+    text(2.3, -2.1, counts[1], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0, counts[2], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.3, -2.1, leg, cex = cex, 
+                           col = col, adj = adj)
+  }, function(counts, cex, adj, col, leg) {
+    text(2.3, -2.1, counts[1], cex = cex, col = col, 
+         adj = adj)
+    text(1.5, 0.1, counts[2], cex = cex, col = col, adj = adj)
+    text(-1.5, 0.1, counts[3], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0.1, counts[4], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.3, -2.1, leg, cex = cex, 
+                           col = col, adj = adj)
+  }, function(counts, cex, adj, col, leg) {
+    text(2.5, -3, counts[1], cex = cex, col = col, adj = adj)
+    text(0, -1.7, counts[2], cex = cex, col = col, adj = adj)
+    text(1.5, 1, counts[3], cex = cex, col = col, adj = adj)
+    text(0.75, -0.35, counts[4], cex = cex, col = col, 
+         adj = adj)
+    text(-1.5, 1, counts[5], cex = cex, col = col, adj = adj)
+    text(-0.75, -0.35, counts[6], cex = cex, col = col, 
+         adj = adj)
+    text(0, 0.9, counts[7], cex = cex, col = col, adj = adj)
+    text(0, 0, counts[8], cex = cex, col = col, adj = adj)
+    if (show.include) text(-2.5, -3, leg, cex = cex, 
+                           col = col, adj = adj)
+  })
+  if (LenInc == 1) 
+    adj &lt;- c(0.5, 0.5)
+  else adj &lt;- c(0.5, 0)
+  showCounts(counts = z, cex = cex[1], adj = adj, col = counts.col[1], leg = include[1])
+  if (LenInc == 2) 
+    showCounts(counts = z2, cex = cex[1], adj = c(0.5, 1), col = counts.col[2], leg = include[2])
+}
+
+make.venn(df.venn, 
+          names = c(&#39;edgeR-v3 (bootstrap)&#39;,&#39;edgeR-v4 (Gibbs)&#39;),
+          cex = rep(8,3)/12,
+          include = c(&quot;up&quot;, &quot;down&quot;),
+          counts.col = c(&quot;red&quot;, &quot;blue&quot;),
+          circle.col = c(&quot;red&quot;, &quot;blue&quot;))</code></pre>
+<p><img src="figure/lung.Rmd/lung_venn-1.png" width="1500" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>file.venn &lt;- tempfile(&quot;venn&quot;,fileext = &#39;.png&#39;)
+png(file.venn,width = 5,height = 4,units = &#39;in&#39;,res = 300)
+par(mar = c(0.25, 0.25, 0.25, 0.25),mgp = c(2,1,0))
+make.venn(df.venn, 
+          names = c(&#39;edgeR-v3 (bootstrap)&#39;,&#39;edgeR-v4 (Gibbs)&#39;),
+          cex = rep(8,3)/12,
+          include = c(&quot;up&quot;, &quot;down&quot;),
+          counts.col = c(&quot;red&quot;, &quot;blue&quot;),
+          circle.col = c(&quot;red&quot;, &quot;blue&quot;))
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.venn &lt;- readPNG(file.venn, native = TRUE)</code></pre>
+<pre class="r"><code>tx.newde &lt;- 
+  dt.dte[edgeR.boot.legacy == FALSE &amp; 
+           edgeR.gibbs.v4 == TRUE,TranscriptID]
+
+out.newde &lt;- 
+  out.gibbs.edgeR.v4[out.gibbs.edgeR.v4$table$EntrezID %in% cancerGenes &amp; rownames(out.gibbs.edgeR.v4) %in% tx.newde,]$table
+out.newde$Biotype &lt;- dt.anno$TXBIOTYPE[match(rownames(out.newde),dt.anno$TXIDVERSION)]
+out.newde$TranscriptID &lt;- rownames(out.newde)
+
+out.newde &lt;- as.data.table(out.newde)
+
+dim(out.newde)</code></pre>
+<pre><code>[1] 49 15</code></pre>
+<pre class="r"><code>f &lt;- function(x,fdr = 0.05){
+  z &lt;- x$FDR
+  y &lt;- x$logFC
+  y &lt;- y[z&lt;0.05]
+  if(length(y) == 0 | length(y) == 1) return(FALSE)
+  if(length(unique(sign(y))) == 1) return(FALSE)
+  return(TRUE)
+}
+
+dt.out.gibbs.edgeR.v4 &lt;- out.gibbs.edgeR.v4$table
+dt.out.gibbs.edgeR.v4$TranscriptID &lt;- rownames(dt.out.gibbs.edgeR.v4)
+dt.out.gibbs.edgeR.v4 &lt;- as.data.table(dt.out.gibbs.edgeR.v4)
+dt.out.gibbs.edgeR.v4[,IsoSwitch := f(.SD),by = &#39;GeneID&#39;,.SDcols = c(&#39;logFC&#39;,&#39;FDR&#39;)]
+is.gibbs.edgeR.v4 &lt;- unique(dt.out.gibbs.edgeR.v4[IsoSwitch == TRUE,EntrezID])
+
+dt.out.boot.edgeR.legacy &lt;- out.boot.edgeR.legacy$table
+dt.out.boot.edgeR.legacy$TranscriptID &lt;- rownames(dt.out.boot.edgeR.legacy)
+dt.out.boot.edgeR.legacy &lt;- as.data.table(dt.out.boot.edgeR.legacy)
+dt.out.boot.edgeR.legacy[,IsoSwitch := f(.SD),by = &#39;GeneID&#39;,.SDcols = c(&#39;logFC&#39;,&#39;FDR&#39;)]
+is.boot.edgeR.legacy &lt;- unique(dt.out.boot.edgeR.legacy[IsoSwitch == TRUE,EntrezID])
+
+is.new &lt;- is.gibbs.edgeR.v4[!is.gibbs.edgeR.v4 %in% is.boot.edgeR.legacy]
+length(is.new)</code></pre>
+<pre><code>[1] 91</code></pre>
+<pre class="r"><code>dt.out.gibbs.edgeR.v4[EntrezID %in% is.new[is.new %in% cancerGenes] &amp; FDR &lt; 0.05,]</code></pre>
+<pre><code>   Length EffectiveLength Overdispersion TranscriptSymbol EntrezID
+    &lt;num&gt;           &lt;num&gt;          &lt;num&gt;           &lt;char&gt;    &lt;int&gt;
+1:   2495        2303.831       1.020096        ITGA3-216     3675
+2:    576         385.276       4.724190        ITGA3-206     3675
+3:   9578        9386.831       1.317270         BRAF-204      673
+4:   2574        2382.831       8.143940         BRAF-206      673
+5:   4889        4697.831       1.193175        ITGA3-202     3675
+               GeneID GeneOfInterest inBoot      logFC     logCPM         F
+               &lt;char&gt;         &lt;lgcl&gt; &lt;lgcl&gt;      &lt;num&gt;      &lt;num&gt;     &lt;num&gt;
+1: ENSG00000005884.18           TRUE   TRUE  2.9320042  3.6108688 86.856150
+2: ENSG00000005884.18           TRUE  FALSE -7.4244324 -0.8668686 77.200497
+3: ENSG00000157764.13           TRUE   TRUE -0.8804733  5.1914380 50.030105
+4: ENSG00000157764.13           TRUE  FALSE  1.1312882 -0.1272295  9.958158
+5: ENSG00000005884.18           TRUE   TRUE  0.3597470 11.0888145  7.998244
+         PValue          FDR       TranscriptID IsoSwitch
+          &lt;num&gt;        &lt;num&gt;             &lt;char&gt;    &lt;lgcl&gt;
+1: 7.645780e-08 5.862624e-07  ENST00000570989.1      TRUE
+2: 4.783457e-07 2.702666e-06  ENST00000505612.1      TRUE
+3: 2.728636e-06 1.183129e-05  ENST00000496384.7      TRUE
+4: 6.175526e-03 1.084725e-02  ENST00000642228.1      TRUE
+5: 1.217187e-02 1.996149e-02 ENST00000320031.13      TRUE</code></pre>
+</div>
+<div
+id="comparison-of-biological-coefficient-of-variation-between-raw-and-scaled-counts"
+class="section level2">
+<h2>Comparison of biological coefficient of variation between raw and
+scaled counts</h2>
+<p>The biological coefficient of variation (BCV) plot is a key plot to
+assess the improvements of the count scaling approach.</p>
+<p>In the <code>edgeR</code> terminology, BCV refers to the square-root
+of the negative binomial (NB) dispersion parameter. For RNA-seq data
+summarized at the gene-level, in which case the mapping ambiguity is
+nearly negligible, the NB dispersions tend to be higher for genes with
+low counts and its trend decreases smoothly with abundance while
+asymptoting to a constant value for genes with large counts. At the
+transcript-level, on the other hand, mapping ambiguity is often highly
+transcript-specific, and estimated NB dispersions based on raw counts
+should be artificially higher for transcripts associated with high
+mapping ambiguity. As a result, the estimated NB dispersions of such
+ambiguous transcripts will deviate from the standard smooth decreasing
+NB dispersion trend when raw counts are considered.</p>
+<p>Under the assumptions of our presented overdispersed Poisson model,
+effective counts computed via the presented count scaling approach
+should lead to estimated NB dispersions that, in a BCV plot, present
+themselves without strong transcript-specific mapping ambiguity effects
+and, in principle, should result in BCV plots similar to those from
+gene-level analyses.</p>
+<p>Below we compare the BCV plots using raw and scaled counts. First, I
+recode the plotBCV function into <code>foo.bcv</code> so that we can
+place the plots into panels with the <code>patchwork</code> package.</p>
+<pre class="r"><code># plotBCV returns invisible(), we need to manually export the plot (code from edgeR::plotBCV)
+foo.bcv &lt;- function (y, 
+                     xlab = &quot;Average log CPM&quot;, 
+                     ylab = &quot;Biological coefficient of variation&quot;, 
+                     pch = 16, cex = 0.2,
+                     col.common = &quot;red&quot;, 
+                     col.trend = &quot;blue&quot;, 
+                     col.tagwise = &quot;black&quot;, 
+                     fontsize = 8, ...) {
+  if (!is(y, &quot;DGEList&quot;)) 
+    stop(&quot;y must be a DGEList.&quot;)
+  A &lt;- y$AveLogCPM
+  if (is.null(A)) 
+    A &lt;- aveLogCPM(y$counts, offset = getOffset(y))
+  disp &lt;- getDispersion(y)
+  if (is.null(disp)) 
+    stop(&quot;No dispersions to plot&quot;)
+  if (attr(disp, &quot;type&quot;) == &quot;common&quot;) 
+    disp &lt;- rep_len(disp, length(A))
+  par(mar = c(3, 3, 0.25, 0.25),mgp = c(1.25,0.5,0))
+  plot(A, sqrt(disp), xlab = xlab, ylab = ylab, type = &quot;n&quot;, 
+       cex.lab = fontsize/12,
+       cex.axis = fontsize/12,
+       ...)
+  labels &lt;- cols &lt;- lty &lt;- pt &lt;- NULL
+  if (!is.null(y$tagwise.dispersion)) {
+    points(A, sqrt(y$tagwise.dispersion), pch = pch, cex = cex, 
+           col = col.tagwise)
+    labels &lt;- c(labels, &quot;Tagwise&quot;)
+    cols &lt;- c(cols, col.tagwise)
+    lty &lt;- c(lty, -1)
+    pt &lt;- c(pt, pch)
+  }
+  if (!is.null(y$common.dispersion)) {
+    abline(h = sqrt(y$common.dispersion), col = col.common, 
+           lwd = 2)
+    labels &lt;- c(labels, &quot;Common&quot;)
+    cols &lt;- c(cols, col.common)
+    lty &lt;- c(lty, 1)
+    pt &lt;- c(pt, -1)
+  }
+  if (!is.null(y$trended.dispersion)) {
+    o &lt;- order(A)
+    lines(A[o], sqrt(y$trended.dispersion)[o], col = col.trend, 
+          lwd = 2)
+    labels &lt;- c(labels, &quot;Trend&quot;)
+    cols &lt;- c(cols, col.trend)
+    lty &lt;- c(lty, 1)
+    pt &lt;- c(pt, -1)
+  }
+  legend(&quot;topright&quot;, legend = labels, lty = lty, pch = pt, 
+         pt.cex = cex, lwd = 2, col = cols,cex = fontsize/12)
+}</code></pre>
+<p>Then, I generate the BCV plots from the real datasets.</p>
+<pre class="r"><code>plot.bcv.real.raw &lt;- wrap_elements(full = ~foo.bcv(dte.raw.filtr.legacy))
+plot.bcv.real.boot &lt;- wrap_elements(full = ~foo.bcv(dte.boot.filtr.legacy,ylim = c(0.05,0.9)))
+plot.bcv.real.gibbs &lt;- wrap_elements(full = ~foo.bcv(dte.gibbs.filtr.legacy,ylim = c(0.05,0.9)))
+
+plot.bcv.real.raw</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_real-1.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plot.bcv.real.boot</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_real-2.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plot.bcv.real.gibbs</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_real-3.png" width="900" style="display: block; margin: auto;" /></p>
+<p>To verify whether our simulated reproduces the caracteristics of the
+real data, we present BCV plots from raw and scaled counts from a single
+simulated dataset generated with unbalanced library sizes, 5 samples per
+group, 100bp paired-end read data, all references transcripts expressed,
+and quantified with Salmon.</p>
+<pre class="r"><code>catch.sim.boot &lt;- catchSalmon(list.dirs(file.path(path.sim,&#39;quant-salmon&#39;),recursive = FALSE))</code></pre>
+<pre><code>Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupA_rep1_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupA_rep2_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupA_rep3_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupA_rep4_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupA_rep5_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupB_rep1_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupB_rep2_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupB_rep3_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupB_rep4_R1, 140789 transcripts, 100 bootstrap samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon/groupB_rep5_R1, 140789 transcripts, 100 bootstrap samples</code></pre>
+<pre class="r"><code>colnames(catch.sim.boot$counts) &lt;- gsub(&quot;group|_R1&quot;,&quot;&quot;,basename(colnames(catch.sim.boot$counts)))
+
+catch.sim.gibbs &lt;- catchSalmon(list.dirs(file.path(path.sim,&#39;quant-salmon-gibbs&#39;),recursive = FALSE))</code></pre>
+<pre><code>Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupA_rep1_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupA_rep2_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupA_rep3_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupA_rep4_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupA_rep5_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupB_rep1_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupB_rep2_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupB_rep3_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupB_rep4_R1, 140789 transcripts, 100 gibbs samples
+Reading ../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1//quant-salmon-gibbs/groupB_rep5_R1, 140789 transcripts, 100 gibbs samples</code></pre>
+<pre class="r"><code>colnames(catch.sim.gibbs$counts) &lt;- gsub(&quot;group|_R1&quot;,&quot;&quot;,basename(colnames(catch.sim.gibbs$counts)))
+
+dte.sim.raw &lt;- DGEList(counts = catch.sim.gibbs$counts,
+                       samples = colnames(catch.sim.gibbs$counts),
+                       group = strsplit2(colnames(catch.sim.gibbs$counts),&quot;_&quot;)[,1])
+dte.sim.raw$genes &lt;- data.frame(row.names = rownames(dte.sim.raw))
+dte.sim.raw$genes$Bootstrap.Overdispersion &lt;- 
+  catch.sim.boot$annotation$Overdispersion[match(rownames(catch.sim.boot$annotation),rownames(dte.sim.raw))]
+
+dte.sim.raw$genes$Gibbs.Overdispersion &lt;- 
+  catch.sim.gibbs$annotation$Overdispersion[match(rownames(catch.sim.gibbs$annotation),rownames(dte.sim.raw))]
+
+design.sim &lt;- model.matrix( ~ 0 + group,data = dte.sim.raw$samples)
+
+keep.sim.raw &lt;- filterByExpr(dte.sim.raw)
+dte.sim.raw.filtr &lt;- dte.sim.raw[keep.sim.raw,, keep.lib.sizes = FALSE]
+dte.sim.raw.filtr &lt;- normLibSizes(dte.sim.raw.filtr)
+dte.sim.raw.filtr &lt;- estimateDisp(dte.sim.raw.filtr,design = design.sim)
+
+dte.sim.gibbs &lt;- dte.sim.raw
+dte.sim.gibbs$counts &lt;- dte.sim.gibbs$counts/dte.sim.gibbs$genes$Gibbs.Overdispersion
+keep.sim.gibbs &lt;- filterByExpr(dte.sim.gibbs)
+dte.sim.gibbs.filtr &lt;- dte.sim.gibbs[keep.sim.gibbs,, keep.lib.sizes = FALSE]
+dte.sim.gibbs.filtr &lt;- normLibSizes(dte.sim.gibbs.filtr)
+dte.sim.gibbs.filtr &lt;- estimateDisp(dte.sim.gibbs.filtr,design = design.sim)
+
+dte.sim.boot &lt;- dte.sim.raw
+dte.sim.boot$counts &lt;- dte.sim.boot$counts/dte.sim.boot$genes$Bootstrap.Overdispersion
+keep.sim.boot &lt;- filterByExpr(dte.sim.boot)
+dte.sim.boot.filtr &lt;- dte.sim.boot[keep.sim.boot,, keep.lib.sizes = FALSE]
+dte.sim.boot.filtr &lt;- normLibSizes(dte.sim.boot.filtr)
+dte.sim.boot.filtr &lt;- estimateDisp(dte.sim.boot.filtr,design = design.sim)
+
+plot.bcv.sim.raw &lt;- wrap_elements(full = ~foo.bcv(dte.sim.raw.filtr))
+plot.bcv.sim.boot &lt;- wrap_elements(full = ~foo.bcv(dte.sim.boot.filtr,ylim = c(0.2,0.625)))
+plot.bcv.sim.gibbs &lt;- wrap_elements(full = ~foo.bcv(dte.sim.gibbs.filtr,ylim = c(0.2,0.625)))
+
+plot.bcv.sim.raw</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_bcv_sim-1.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plot.bcv.sim.boot</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_bcv_sim-2.png" width="900" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plot.bcv.sim.gibbs</code></pre>
+<p><img src="figure/lung.Rmd/casestudy_res_bcv_sim-3.png" width="900" style="display: block; margin: auto;" /></p>
+</div>
+<div id="coverage-plots" class="section level2">
+<h2>Coverage plots</h2>
+<pre class="r"><code>txdb &lt;- 
+  makeTxDbFromGRanges(gr[gr$transcript_id %in% gr.tx$transcript_id])</code></pre>
+<pre><code>Warning in .get_cds_IDX(mcols0$type, mcols0$phase): The &quot;phase&quot; metadata column contains non-NA values for features of type
+  stop_codon. This information was ignored.</code></pre>
+<pre class="r"><code>BAM &lt;- file.path(path.bam,paste0(dte.boot$samples$GSM,&#39;.bam&#39;))
+BAM.tracks &lt;- lapply(1:length(BAM),function(x){AlignmentsTrack(BAM[x],name = basename(BAM[x]),isPaired = TRUE,background.title = &#39;black&#39;)})</code></pre>
+<pre class="r"><code>geneTrack &lt;- 
+  GeneRegionTrack(txdb,showId=TRUE,
+                  just.group = &#39;right&#39;,
+                  background.title = &quot;white&quot;,
+                  fill = &#39;grey&#39;,
+                  name = &#39;Transcripts&#39;,
+                  col.title = &#39;black&#39;,
+                  fontcolor.group = &#39;black&#39;)
+
+ranges(geneTrack)$symbol &lt;- 
+  gr.tx$transcript_name[match(ranges(geneTrack)$symbol,gr.tx$transcript_id)]
+
+getGeneRanges &lt;- function(entrezid,type = &#39;gene&#39;,flank = TRUE){
+  out &lt;-
+    genes(TxDb.Mmusculus.UCSC.mm39.refGene, filter = list(gene_id = entrezid))
+  if (type == &#39;promoter&#39;) {
+    out &lt;- promoters(out)
+  }
+  if(flank == TRUE &amp; type == &#39;gene&#39;){
+    flank &lt;- ceiling(0.25*width(out))
+    out &lt;- GRanges(seqnames = as.character(seqnames(out)),IRanges(start = start(out)-flank,end = end(out) + flank))
+  }
+  
+  return(out)
+}
+
+getCoverage &lt;- function(bam, lib.sizes, gr, param, labels = NULL, group.by = NULL, ...) {
+  reads &lt;- bplapply(seq_along(bam),function(i){
+    # For some readson csaw has trouble with library GSM5255705 and says
+    # that all mate reads are unpaired.
+    reads &lt;- extractReads(bam.file = bam[i], gr, param = param,as.reads = TRUE)
+  },...)
+  
+  if (!is.null(group.by)) {
+    groups &lt;- unique(group.by)
+    reads &lt;- bplapply(seq_along(groups),function(i){
+      subreads &lt;- reads[group.by == groups[i]]
+      do.call(&#39;c&#39;,subreads)
+    },...)
+    names(reads) &lt;- groups
+    
+    lib.sizes &lt;- bplapply(seq_along(groups),function(i){
+      sum(lib.sizes[group.by == groups[i]])
+    },...)
+    lib.sizes &lt;- unlist(lib.sizes)
+  } else{
+    if (is.null(labels)) {
+      names(reads) &lt;- bam
+    } else{
+      names(reads) &lt;- labels
+    }
+    
+  }
+  
+  cov &lt;- bplapply(seq_along(reads),function(i){
+    as(coverage(reads[[i]])/(lib.sizes[i]/1e6), &quot;GRanges&quot;)
+  },...)
+  names(cov) &lt;- names(reads)
+  return(cov)
+}
+
+getTrack &lt;- function(cov, fill = NULL, ylim = NULL,yTicksAt = NULL, ...) {
+  if (is.null(fill)) {
+    fill &lt;- rep(&#39;gray&#39;,length(cov))
+  }
+  if (is.null(ylim)) {
+    max.y &lt;- max(unlist(lapply(cov,function(i){max(i$score)})))
+    ylim &lt;- c(0,round(max.y + 5, -1))
+  }
+  out &lt;- bplapply(seq_along(cov),function(i){
+    DataTrack(cov[[i]],
+              type = &quot;histogram&quot;,
+              ylim = ylim,
+              yTicksAt = yTicksAt,
+              name = names(cov[i]),
+              fill = fill[i],
+              col.title = &#39;black&#39;,
+              background.title = &quot;white&quot;,
+              col.axis = &#39;black&#39;,
+              col.histogram = NA)
+  },...)
+  
+  return(out)
+}
+
+plotCoverage &lt;- function(bam,lib.sizes,param,anno,fontsize = 8,
+                         gr = NULL,entrezid = NULL,fill = NULL, labels = NULL, group.by = NULL, flank = TRUE, main = NULL,ylim = NULL, yTicksAt = NULL, ...){
+  if(!is.null(entrezid)){
+    gr &lt;- getGeneRanges(entrezid,flank = TRUE)
+  }
+  cov &lt;- getCoverage(bam = bam,lib.sizes = lib.sizes,gr = gr,param = param,group.by = group.by,labels = labels,...)
+  
+  if (!is.null(fill) &amp; !is.null(group.by)) {
+    groups &lt;- unique(group.by)
+    fill &lt;- lapply(seq_along(groups),function(i){
+      subfill &lt;- unique(fill[group.by == groups[i]])
+      if(length(subfill) == 1){
+        return(subfill)
+      } else{
+        stop(&#39;fill argument must be unique within groups&#39;)
+      }
+    })
+    fill &lt;- unlist(fill)
+  }
+  track &lt;- getTrack(cov = cov,fill = fill,ylim = ylim,yTicksAt = yTicksAt)
+  
+  itrack &lt;- IdeogramTrack(genome = &#39;hg38&#39;, 
+                          chromosome = as.character(seqnames(gr)),
+                          fontcolor = &#39;black&#39;,
+                          cex = fontsize/12)
+  axisTrack &lt;- GenomeAxisTrack(cex = fontsize/12)
+  
+  plotTracks(c(itrack,axisTrack,track, anno),
+             chromosome = as.character(seqnames(gr)),
+             cex.axis = fontsize/12,
+             cex.title = fontsize/12,
+             cex.group = fontsize/12,
+             sizes = c(0.1,0.75,rep(0.75,6), 1),
+             from = start(gr),
+             to = end(gr))
+}</code></pre>
+<pre class="r"><code>cs.boot$counts[grepl(&quot;^HABP2-&quot;,cs.boot$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                  GSM5255695 GSM5255696 GSM5255697 GSM5255704 GSM5255705
+ENST00000542051.5          1          0          0          0          0
+ENST00000351270.4          0          0          0        197       1155
+ENST00000460714.1          0          0          0          0          0
+                  GSM5255706
+ENST00000542051.5          0
+ENST00000351270.4        247
+ENST00000460714.1          0</code></pre>
+<pre class="r"><code>cs.boot$annotation[grepl(&quot;^HABP2-&quot;,cs.boot$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                  Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000542051.5   2972        2780.819       1.000000        HABP2-203
+ENST00000351270.4   2985        2793.819       1.000000        HABP2-201
+ENST00000460714.1    557         366.390       2.161441        HABP2-202
+                  EntrezID             GeneID GeneOfInterest
+ENST00000542051.5     3026 ENSG00000148702.15           TRUE
+ENST00000351270.4     3026 ENSG00000148702.15           TRUE
+ENST00000460714.1     3026 ENSG00000148702.15           TRUE</code></pre>
+<pre class="r"><code>t(t(cs.boot$counts[grepl(&quot;^HABP2-&quot;,cs.boot$annotation$TranscriptSymbol),])/
+    colSums(cs.boot$counts[grepl(&quot;^HABP2-&quot;,cs.boot$annotation$TranscriptSymbol),]))[2,]</code></pre>
+<pre><code>GSM5255695 GSM5255696 GSM5255697 GSM5255704 GSM5255705 GSM5255706 
+         0        NaN        NaN          1          1          1 </code></pre>
+<pre class="r"><code>cs.gibbs$counts[grepl(&quot;^HABP2-&quot;,cs.gibbs$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                  GSM5255695 GSM5255696 GSM5255697 GSM5255704 GSM5255705
+ENST00000542051.5          1          0          0          0          0
+ENST00000351270.4          0          0          0        197       1155
+ENST00000460714.1          0          0          0          0          0
+                  GSM5255706
+ENST00000542051.5          0
+ENST00000351270.4        247
+ENST00000460714.1          0</code></pre>
+<pre class="r"><code>cs.gibbs$annotation[grepl(&quot;^HABP2-&quot;,cs.gibbs$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                  Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000542051.5   2972        2780.831      10.491857        HABP2-203
+ENST00000351270.4   2985        2793.831       1.415448        HABP2-201
+ENST00000460714.1    557         366.416       1.402310        HABP2-202
+                  EntrezID             GeneID GeneOfInterest
+ENST00000542051.5     3026 ENSG00000148702.15           TRUE
+ENST00000351270.4     3026 ENSG00000148702.15           TRUE
+ENST00000460714.1     3026 ENSG00000148702.15           TRUE</code></pre>
+<pre class="r"><code>cs.boot$counts[grepl(&quot;^BBC3-&quot;,cs.boot$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                   GSM5255695 GSM5255696 GSM5255697 GSM5255704 GSM5255705
+ENST00000601438.2       0.000      0.000      0.000      0.000     47.336
+ENST00000449228.5       0.000      9.272      5.182      0.000     25.624
+ENST00000300880.11      0.000      0.000      0.000      0.000      0.000
+ENST00000341983.8      40.762     27.845     47.700     94.750    306.979
+ENST00000439096.2      68.103     97.183     87.356    141.773    732.759
+ENST00000598636.1       4.135      8.700     12.763      3.477      5.302
+                   GSM5255706
+ENST00000601438.2       0.000
+ENST00000449228.5      28.576
+ENST00000300880.11      0.000
+ENST00000341983.8      71.240
+ENST00000439096.2     124.558
+ENST00000598636.1       7.625</code></pre>
+<pre class="r"><code>cs.boot$annotation[grepl(&quot;^BBC3-&quot;,cs.boot$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                   Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000601438.2    1747        1555.819       4.627888         BBC3-206
+ENST00000449228.5    1827        1635.819      19.912247         BBC3-204
+ENST00000300880.11   1347        1155.819      21.652578         BBC3-201
+ENST00000341983.8    1538        1346.819       8.266221         BBC3-202
+ENST00000439096.2    1838        1646.819       3.576531         BBC3-203
+ENST00000598636.1     900         708.843       2.070587         BBC3-205
+                   EntrezID             GeneID GeneOfInterest
+ENST00000601438.2     27113 ENSG00000105327.17           TRUE
+ENST00000449228.5     27113 ENSG00000105327.17           TRUE
+ENST00000300880.11    27113 ENSG00000105327.17           TRUE
+ENST00000341983.8     27113 ENSG00000105327.17           TRUE
+ENST00000439096.2     27113 ENSG00000105327.17           TRUE
+ENST00000598636.1     27113 ENSG00000105327.17           TRUE</code></pre>
+<pre class="r"><code>out.boot.edgeR.v4$table[grepl(&quot;^BBC3-&quot;,out.boot.edgeR.v4$table$TranscriptSymbol),]</code></pre>
+<pre><code>                  Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000439096.2   1838        1646.819       3.576531         BBC3-203
+                  EntrezID             GeneID GeneOfInterest inGibbs    logFC
+ENST00000439096.2    27113 ENSG00000105327.17           TRUE    TRUE 1.223909
+                    logCPM        F      PValue          FDR
+ENST00000439096.2 1.308461 26.85386 6.36616e-05 0.0001690593</code></pre>
+<pre class="r"><code>cs.gibbs$counts[grepl(&quot;^BBC3-&quot;,cs.gibbs$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                   GSM5255695 GSM5255696 GSM5255697 GSM5255704 GSM5255705
+ENST00000601438.2       0.000      0.000      0.000      0.000     47.330
+ENST00000449228.5       0.000      9.272      5.183      0.000     25.627
+ENST00000300880.11      0.000      0.000      0.000      0.000      0.000
+ENST00000341983.8      40.762     27.845     47.698     94.752    306.989
+ENST00000439096.2      68.104     97.182     87.356    141.771    732.752
+ENST00000598636.1       4.135      8.700     12.763      3.477      5.302
+                   GSM5255706
+ENST00000601438.2       0.000
+ENST00000449228.5      28.575
+ENST00000300880.11      0.000
+ENST00000341983.8      71.241
+ENST00000439096.2     124.559
+ENST00000598636.1       7.625</code></pre>
+<pre class="r"><code>cs.gibbs$annotation[grepl(&quot;^BBC3-&quot;,cs.gibbs$annotation$TranscriptSymbol),]</code></pre>
+<pre><code>                   Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000601438.2    1747        1555.831       3.450299         BBC3-206
+ENST00000449228.5    1827        1635.831       7.642487         BBC3-204
+ENST00000300880.11   1347        1155.831       8.520334         BBC3-201
+ENST00000341983.8    1538        1346.831       6.778901         BBC3-202
+ENST00000439096.2    1838        1646.831       3.269564         BBC3-203
+ENST00000598636.1     900         708.857       1.940979         BBC3-205
+                   EntrezID             GeneID GeneOfInterest
+ENST00000601438.2     27113 ENSG00000105327.17           TRUE
+ENST00000449228.5     27113 ENSG00000105327.17           TRUE
+ENST00000300880.11    27113 ENSG00000105327.17           TRUE
+ENST00000341983.8     27113 ENSG00000105327.17           TRUE
+ENST00000439096.2     27113 ENSG00000105327.17           TRUE
+ENST00000598636.1     27113 ENSG00000105327.17           TRUE</code></pre>
+<pre class="r"><code>out.gibbs.edgeR.v4$table[grepl(&quot;^BBC3-&quot;,out.gibbs.edgeR.v4$table$TranscriptSymbol),]</code></pre>
+<pre><code>                  Length EffectiveLength Overdispersion TranscriptSymbol
+ENST00000439096.2   1838        1646.831       3.269564         BBC3-203
+ENST00000341983.8   1538        1346.831       6.778901         BBC3-202
+                  EntrezID             GeneID GeneOfInterest inBoot    logFC
+ENST00000439096.2    27113 ENSG00000105327.17           TRUE   TRUE 1.224532
+ENST00000341983.8    27113 ENSG00000105327.17           TRUE  FALSE 1.332831
+                      logCPM        F       PValue          FDR
+ENST00000439096.2  1.4325112 27.38410 0.0000837423 0.0002343152
+ENST00000341983.8 -0.4333086 11.94181 0.0032993635 0.0061636621</code></pre>
+<pre class="r"><code>HABP2 &lt;- tempfile(&quot;HABP2&quot;,fileext = &#39;png&#39;)
+BBC3 &lt;- tempfile(&quot;BBC3&quot;,fileext = &#39;png&#39;)
+
+param &lt;- readParam(pe = &#39;none&#39;,restrict = paste0(&quot;chr&quot;, c(1:19, &quot;X&quot;, &quot;Y&quot;)))
+
+geneTrack.left &lt;- geneTrack
+geneTrack.left@dp@pars$just.group &lt;- &#39;left&#39;
+
+png(HABP2,height = 8,width = 4,res = 300,units = &#39;in&#39;)
+plotCoverage(gr = GRanges(&#39;chr10&#39;,IRanges(113535000,113591602)),
+             bam = BAM,
+             lib.sizes = dte.boot$samples$lib.size,
+             param = param,
+             anno = geneTrack.left,
+             fill = c(rep(&#39;#000000&#39;,3),rep(&#39;#ca5b6a&#39;,3)),
+             ylim = c(0,2),
+             yTicksAt = c(0,1,2),
+             labels = dte.boot$samples$Sample)</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%
+
+
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%
+
+
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
+<pre><code>Warning in curlSetOpt(..., .opts = .opts, curl = h, .encoding = .encoding):
+Error setting the option for # 3 (status = 43) (enum = 81) (value =
+0xe2d3ccd0): A libcurl function was given a bad argument CURLOPT_SSL_VERIFYHOST
+no longer supports 1 as value!</code></pre>
+<pre><code>Warning in curlSetOpt(..., .opts = .opts, curl = h, .encoding = .encoding):
+Error setting the option for # 3 (status = 43) (enum = 81) (value =
+0xad217430): A libcurl function was given a bad argument CURLOPT_SSL_VERIFYHOST
+no longer supports 1 as value!</code></pre>
+<pre><code>Warning in curlSetOpt(..., .opts = .opts, curl = h, .encoding = .encoding):
+Error setting the option for # 3 (status = 43) (enum = 81) (value =
+0x7d621dc0): A libcurl function was given a bad argument CURLOPT_SSL_VERIFYHOST
+no longer supports 1 as value!</code></pre>
+<pre class="r"><code>dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>png(BBC3,height = 8,width = 4,res = 300,units = &#39;in&#39;)
+plotCoverage(gr = GRanges(&#39;chr19&#39;,IRanges(47217500,47234860)),
+             bam = BAM,
+             lib.sizes = dte.boot$samples$lib.size,
+             param = param,
+             anno = geneTrack.left,
+             fill = c(rep(&#39;#000000&#39;,3),rep(&#39;#ca5b6a&#39;,3)),
+             ylim = c(0,4),
+             yTicksAt = c(0,2,4),
+             labels = dte.boot$samples$Sample)</code></pre>
+<pre><code>
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%
+
+
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%
+
+
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%</code></pre>
+<pre class="r"><code>dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.HABP2 &lt;- readPNG(HABP2, native = TRUE)
+fig.BBC3 &lt;- readPNG(BBC3, native = TRUE)
+
+include_graphics(HABP2)</code></pre>
+<p><img src="../../../../scratch/users/baldoni.p/tmp/Rtmp2uKd6o/HABP291904d12cbfdpng" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>include_graphics(BBC3)</code></pre>
+<p><img src="../../../../scratch/users/baldoni.p/tmp/Rtmp2uKd6o/BBC391904ba298bapng" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="output-files" class="section level1">
+<h1>Output files</h1>
+<pre class="r"><code># Plot RTA overdispersion
+fig.rta &lt;- wrap_plots(A = fig.scatter.salmon,
+                      B = fig.rtama.salmon,
+                      C = fig.resampling.salmon,
+                      design = c(area(1,1),area(2,1),area(1,2,2,2)),
+                      widths = c(2.5,5.5)/8) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta,
+       filename = file.path(path.misc,&#39;Figure-RTA.png&#39;),
+       device = &#39;png&#39;,width = 8,height = 5,units = &#39;in&#39;,dpi = 300)
+
+# Plot DTE
+fig.dte &lt;- wrap_plots(A = wrap_elements(fig.ql),
+                      B = wrap_elements(fig.venn),
+                      C = wrap_elements(fig.upset),
+                      D = wrap_elements(fig.heat),
+                      design = c(area(1,1),area(2,1),area(3,1),area(1,2,3,2))) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.dte,
+       filename = file.path(path.misc,&#39;Figure-DTE.png&#39;),
+       height = 12,width = 10)
+
+# Plot coverage
+fig.coverage &lt;- wrap_elements(fig.HABP2) + wrap_elements(fig.BBC3)
+fig.coverage &lt;- fig.coverage +
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.coverage,
+       filename = file.path(path.misc,&#39;Figure-Coverage.png&#39;),
+       height = 8,width = 8)</code></pre>
+<pre class="r"><code># Plot RTA overdispersion
+fig.rta.supp &lt;- wrap_plots(A = fig.scatter.kallisto,
+                           B = fig.rtama.kallisto,
+                           C = fig.resampling.kallisto,
+                           design = c(area(1,1),area(2,1),area(1,2,2,2)),
+                           widths = c(2.5,5.5)/8) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta.supp,
+       filename = file.path(path.misc,&#39;SuppFigure-RTA.png&#39;),
+       device = &#39;png&#39;,width = 8,height = 5,units = &#39;in&#39;,dpi = 300)
+
+# Plot densities
+fig.density.plot &lt;- wrap_plots(A = wrap_elements(fig.density))
+ggsave(plot = fig.density.plot,
+       filename = file.path(path.misc,&#39;SuppFigure-Density.png&#39;),
+       height = 4,width = 4)
+
+# Plot RTA overdispersion DTE
+fig.rta.dte &lt;- wrap_plots(A = fig.scatter.gibbs,
+                          B = fig.scatter.boot,
+                          design = c(area(1,1),area(1,2))) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.rta.dte,
+       filename = file.path(path.misc,&#39;SuppFigure-RTA-DTE.png&#39;),
+       device = &#39;png&#39;,width = 6,height = 3,units = &#39;in&#39;,dpi = 300)
+
+# Plot BCVs
+fig.bcv &lt;- wrap_plots(A = plot.bcv.real.raw,
+                      B = plot.bcv.real.boot,
+                      C = plot.bcv.real.gibbs,
+                      D = plot.bcv.sim.raw,
+                      E = plot.bcv.sim.boot,
+                      `F` = plot.bcv.sim.gibbs,
+                      design = c(area(1,1),area(1,2),area(1,3),
+                                 area(2,1),area(2,2),area(2,3))) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.bcv,
+       filename = file.path(path.misc,&#39;SuppFigure-BCV.png&#39;),
+       device = &#39;png&#39;,width = 9,height = 6,units = &#39;in&#39;,dpi = 300)</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: CentOS Linux 7 (Core)
+
+Matrix products: default
+BLAS:   /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRblas.so 
+LAPACK: /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRlapack.so;  LAPACK version 3.11.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats4    grid      stats     graphics  grDevices utils     datasets 
+[8] methods   base     
+
+other attached packages:
+ [1] ensembldb_2.26.0            AnnotationFilter_1.26.0    
+ [3] GenomicFeatures_1.54.3      AnnotationDbi_1.64.1       
+ [5] pkg_1.0                     BiocParallel_1.36.0        
+ [7] lubridate_1.9.3             csaw_1.36.1                
+ [9] SummarizedExperiment_1.32.0 Biobase_2.62.0             
+[11] MatrixGenerics_1.14.0       matrixStats_1.2.0          
+[13] png_0.1-8                   Gviz_1.46.1                
+[15] magrittr_2.0.3              rtracklayer_1.62.0         
+[17] GenomicRanges_1.54.1        GenomeInfoDb_1.38.6        
+[19] IRanges_2.36.0              S4Vectors_0.40.2           
+[21] patchwork_1.2.0             edgeR_4.0.16               
+[23] limma_3.58.1                ggupset_0.3.0              
+[25] ggplot2_3.5.0               AnnotationHub_3.10.0       
+[27] BiocFileCache_2.10.1        dbplyr_2.4.0               
+[29] BiocGenerics_0.48.1         ComplexHeatmap_2.18.0      
+[31] data.table_1.15.0           knitr_1.45                 
+[33] workflowr_1.7.1            
+
+loaded via a namespace (and not attached):
+  [1] fs_1.6.3                      ProtGenerics_1.34.0          
+  [3] bitops_1.0-7                  devtools_2.4.5               
+  [5] httr_1.4.7                    RColorBrewer_1.1-3           
+  [7] doParallel_1.0.17             profvis_0.3.8                
+  [9] tools_4.3.2                   backports_1.4.1              
+ [11] utf8_1.2.4                    R6_2.5.1                     
+ [13] lazyeval_0.2.2                rhdf5filters_1.14.1          
+ [15] GetoptLong_1.0.5              urlchecker_1.0.1             
+ [17] withr_3.0.0                   prettyunits_1.2.0            
+ [19] gridExtra_2.3                 textshaping_0.3.7            
+ [21] cli_3.6.2                     Cairo_1.6-2                  
+ [23] labeling_0.4.3                sass_0.4.8                   
+ [25] readr_2.1.5                   Rsamtools_2.18.0             
+ [27] systemfonts_1.0.5             foreign_0.8-86               
+ [29] tximeta_1.20.3                svglite_2.1.3                
+ [31] Rsubread_2.16.1               dichromat_2.0-0.1            
+ [33] showtext_0.9-6                sessioninfo_1.2.2            
+ [35] BSgenome_1.70.2               rstudioapi_0.15.0            
+ [37] sysfonts_0.8.8                RSQLite_2.3.5                
+ [39] gridGraphics_0.5-1            generics_0.1.3               
+ [41] shape_1.4.6.1                 BiocIO_1.12.0                
+ [43] gtools_3.9.5                  vroom_1.6.5                  
+ [45] dplyr_1.1.4                   thematic_0.1.5               
+ [47] Matrix_1.6-5                  interp_1.1-6                 
+ [49] fansi_1.0.6                   abind_1.4-5                  
+ [51] lifecycle_1.0.4               whisker_0.4.1                
+ [53] yaml_2.3.8                    rhdf5_2.46.1                 
+ [55] SparseArray_1.2.4             blob_1.2.4                   
+ [57] promises_1.2.1                crayon_1.5.2                 
+ [59] miniUI_0.1.1.1                lattice_0.22-5               
+ [61] KEGGREST_1.42.0               pillar_1.9.0                 
+ [63] fishpond_2.8.0                metapod_1.10.1               
+ [65] rjson_0.2.21                  wasabi_1.0.1                 
+ [67] codetools_0.2-19              glue_1.7.0                   
+ [69] getPass_0.2-4                 remotes_2.4.2.1              
+ [71] vctrs_0.6.5                   gtable_0.3.4                 
+ [73] cachem_1.0.8                  xfun_0.42                    
+ [75] S4Arrays_1.2.0                mime_0.12                    
+ [77] sleuth_0.30.0                 SingleCellExperiment_1.24.0  
+ [79] iterators_1.0.14              showtextdb_3.0               
+ [81] statmod_1.5.0                 interactiveDisplayBase_1.40.0
+ [83] ellipsis_0.3.2                usethis_2.2.3                
+ [85] bit64_4.0.5                   progress_1.2.3               
+ [87] filelock_1.0.3                rprojroot_2.0.4              
+ [89] bslib_0.6.1                   rpart_4.1.23                 
+ [91] colorspace_2.1-0              DBI_1.2.2                    
+ [93] Hmisc_5.1-1                   nnet_7.3-19                  
+ [95] tidyselect_1.2.0              processx_3.8.3               
+ [97] bit_4.0.5                     compiler_4.3.2               
+ [99] curl_5.2.0                    git2r_0.33.0                 
+[101] htmlTable_2.4.2               xml2_1.3.6                   
+[103] desc_1.4.3                    DelayedArray_0.28.0          
+[105] checkmate_2.3.1               scales_1.3.0                 
+[107] callr_3.7.5                   rappdirs_0.3.3               
+[109] stringr_1.5.1                 digest_0.6.34                
+[111] rmarkdown_2.25                XVector_0.42.0               
+[113] htmltools_0.5.7               pkgconfig_2.0.3              
+[115] jpeg_0.1-10                   base64enc_0.1-3              
+[117] highr_0.10                    fastmap_1.1.1                
+[119] rlang_1.1.3                   GlobalOptions_0.1.2          
+[121] htmlwidgets_1.6.4             shiny_1.8.0                  
+[123] farver_2.1.1                  jquerylib_0.1.4              
+[125] jsonlite_1.8.8                VariantAnnotation_1.48.1     
+[127] RCurl_1.98-1.14               kableExtra_1.4.0             
+[129] Formula_1.2-5                 GenomeInfoDbData_1.2.11      
+[131] Rhdf5lib_1.24.2               munsell_0.5.0                
+[133] Rcpp_1.0.12                   stringi_1.8.3                
+[135] zlibbioc_1.48.0               pkgbuild_1.4.3               
+[137] parallel_4.3.2                deldir_2.0-2                 
+[139] Biostrings_2.70.2             splines_4.3.2                
+[141] hms_1.1.3                     circlize_0.4.16              
+[143] locfit_1.5-9.8                ps_1.7.6                     
+[145] biomaRt_2.58.2                pkgload_1.3.4                
+[147] BiocVersion_3.18.1            XML_3.99-0.16.1              
+[149] evaluate_0.23                 latticeExtra_0.6-30          
+[151] biovizBase_1.50.0             BiocManager_1.30.22          
+[153] tzdb_0.4.0                    foreach_1.5.2                
+[155] httpuv_1.6.14                 purrr_1.0.2                  
+[157] clue_0.3-65                   xtable_1.8-4                 
+[159] restfulr_0.0.15               svMisc_1.2.3                 
+[161] later_1.3.2                   ragg_1.2.7                   
+[163] viridisLite_0.4.2             tibble_3.2.1                 
+[165] memoise_2.0.1                 GenomicAlignments_1.38.2     
+[167] tximport_1.30.0               cluster_2.1.6                
+[169] timechange_0.3.0             </code></pre>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

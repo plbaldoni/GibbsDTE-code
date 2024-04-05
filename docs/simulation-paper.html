@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Pedro L. Baldoni" />
+
+
+<title>Simulation study</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">GibbsDTE-code</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/plbaldoni/GibbsDTE-code">
+    <span class="fab fa-github"></span>
+     
+    GitHub
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Simulation study</h1>
+<h4 class="author">Pedro L. Baldoni</h4>
+<h4 class="date">05 April, 2024</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2024-04-05
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>GibbsDTE-code/analysis/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20231211code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20231211)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20231211code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20231211)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetreebebf9467a656497c42cb2a8f1a7e2e512b364682targetblankbebf946a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/bebf9467a656497c42cb2a8f1a7e2e512b364682" target="_blank">bebf946</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetreebebf9467a656497c42cb2a8f1a7e2e512b364682targetblankbebf946a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/bebf9467a656497c42cb2a8f1a7e2e512b364682" target="_blank">bebf946</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rprofile
+    Ignored:    .Rproj.user/
+    Ignored:    .gitattributes
+    Ignored:    .gitignore
+    Ignored:    GibbsDTE-code.Rproj
+    Ignored:    code/lung/data/slurm-10678225.out
+    Ignored:    code/lung/index-subread/.RData
+    Ignored:    code/lung/index-subread/buildindex.Rout
+    Ignored:    code/lung/index-subread/slurm-15397947.out
+    Ignored:    code/lung/index-subread/slurm-15397948.out
+    Ignored:    code/lung/index-subread/slurm-15397949.out
+    Ignored:    code/lung/index/slurm-10679764.out
+    Ignored:    code/lung/index/slurm-10679768.out
+    Ignored:    code/lung/index/slurm-10684814.out
+    Ignored:    code/lung/kallisto/slurm-16121443.out
+    Ignored:    code/lung/salmon/.RData
+    Ignored:    code/lung/salmon/runWasabi.Rout
+    Ignored:    code/lung/salmon/slurm-15257704.out
+    Ignored:    code/lung/salmon/slurm-15397973.out
+    Ignored:    code/lung/salmon/slurm-15887027.out
+    Ignored:    code/lung/subread/.nextflow.log
+    Ignored:    code/lung/subread/.nextflow/
+    Ignored:    code/lung/subread/log/
+    Ignored:    code/lung/subread/report.html
+    Ignored:    code/lung/subread/slurm-15398003.out
+    Ignored:    code/lung/subread/timeline.html
+    Ignored:    code/lung/subread/trace-20240201-45121600.txt
+    Ignored:    code/pkg/.Rbuildignore
+    Ignored:    code/pkg/.Rhistory
+    Ignored:    code/pkg/.Rproj.user/
+    Ignored:    code/pkg/pkg.Rproj
+    Ignored:    code/pkg/src/.gitignore
+    Ignored:    code/pkg/src/RcppExports.o
+    Ignored:    code/pkg/src/pkg.so
+    Ignored:    code/pkg/src/rcpparma_hello_world.o
+    Ignored:    code/simulation/.RData
+    Ignored:    code/simulation/slurm-15466798.out
+    Ignored:    code/simulation/slurm-15466799_1.out
+    Ignored:    code/simulation/slurm-15466799_10.out
+    Ignored:    code/simulation/slurm-15466799_100.out
+    Ignored:    code/simulation/slurm-15466799_101.out
+    Ignored:    code/simulation/slurm-15466799_102.out
+    Ignored:    code/simulation/slurm-15466799_103.out
+    Ignored:    code/simulation/slurm-15466799_104.out
+    Ignored:    code/simulation/slurm-15466799_105.out
+    Ignored:    code/simulation/slurm-15466799_106.out
+    Ignored:    code/simulation/slurm-15466799_107.out
+    Ignored:    code/simulation/slurm-15466799_108.out
+    Ignored:    code/simulation/slurm-15466799_109.out
+    Ignored:    code/simulation/slurm-15466799_11.out
+    Ignored:    code/simulation/slurm-15466799_110.out
+    Ignored:    code/simulation/slurm-15466799_111.out
+    Ignored:    code/simulation/slurm-15466799_112.out
+    Ignored:    code/simulation/slurm-15466799_113.out
+    Ignored:    code/simulation/slurm-15466799_114.out
+    Ignored:    code/simulation/slurm-15466799_115.out
+    Ignored:    code/simulation/slurm-15466799_116.out
+    Ignored:    code/simulation/slurm-15466799_117.out
+    Ignored:    code/simulation/slurm-15466799_118.out
+    Ignored:    code/simulation/slurm-15466799_119.out
+    Ignored:    code/simulation/slurm-15466799_12.out
+    Ignored:    code/simulation/slurm-15466799_120.out
+    Ignored:    code/simulation/slurm-15466799_121.out
+    Ignored:    code/simulation/slurm-15466799_122.out
+    Ignored:    code/simulation/slurm-15466799_123.out
+    Ignored:    code/simulation/slurm-15466799_124.out
+    Ignored:    code/simulation/slurm-15466799_125.out
+    Ignored:    code/simulation/slurm-15466799_126.out
+    Ignored:    code/simulation/slurm-15466799_127.out
+    Ignored:    code/simulation/slurm-15466799_128.out
+    Ignored:    code/simulation/slurm-15466799_129.out
+    Ignored:    code/simulation/slurm-15466799_13.out
+    Ignored:    code/simulation/slurm-15466799_130.out
+    Ignored:    code/simulation/slurm-15466799_131.out
+    Ignored:    code/simulation/slurm-15466799_132.out
+    Ignored:    code/simulation/slurm-15466799_133.out
+    Ignored:    code/simulation/slurm-15466799_134.out
+    Ignored:    code/simulation/slurm-15466799_135.out
+    Ignored:    code/simulation/slurm-15466799_136.out
+    Ignored:    code/simulation/slurm-15466799_137.out
+    Ignored:    code/simulation/slurm-15466799_138.out
+    Ignored:    code/simulation/slurm-15466799_139.out
+    Ignored:    code/simulation/slurm-15466799_14.out
+    Ignored:    code/simulation/slurm-15466799_140.out
+    Ignored:    code/simulation/slurm-15466799_141.out
+    Ignored:    code/simulation/slurm-15466799_142.out
+    Ignored:    code/simulation/slurm-15466799_143.out
+    Ignored:    code/simulation/slurm-15466799_144.out
+    Ignored:    code/simulation/slurm-15466799_145.out
+    Ignored:    code/simulation/slurm-15466799_146.out
+    Ignored:    code/simulation/slurm-15466799_147.out
+    Ignored:    code/simulation/slurm-15466799_148.out
+    Ignored:    code/simulation/slurm-15466799_149.out
+    Ignored:    code/simulation/slurm-15466799_15.out
+    Ignored:    code/simulation/slurm-15466799_150.out
+    Ignored:    code/simulation/slurm-15466799_151.out
+    Ignored:    code/simulation/slurm-15466799_152.out
+    Ignored:    code/simulation/slurm-15466799_153.out
+    Ignored:    code/simulation/slurm-15466799_154.out
+    Ignored:    code/simulation/slurm-15466799_155.out
+    Ignored:    code/simulation/slurm-15466799_156.out
+    Ignored:    code/simulation/slurm-15466799_157.out
+    Ignored:    code/simulation/slurm-15466799_158.out
+    Ignored:    code/simulation/slurm-15466799_159.out
+    Ignored:    code/simulation/slurm-15466799_16.out
+    Ignored:    code/simulation/slurm-15466799_160.out
+    Ignored:    code/simulation/slurm-15466799_161.out
+    Ignored:    code/simulation/slurm-15466799_162.out
+    Ignored:    code/simulation/slurm-15466799_163.out
+    Ignored:    code/simulation/slurm-15466799_164.out
+    Ignored:    code/simulation/slurm-15466799_165.out
+    Ignored:    code/simulation/slurm-15466799_166.out
+    Ignored:    code/simulation/slurm-15466799_167.out
+    Ignored:    code/simulation/slurm-15466799_168.out
+    Ignored:    code/simulation/slurm-15466799_169.out
+    Ignored:    code/simulation/slurm-15466799_17.out
+    Ignored:    code/simulation/slurm-15466799_170.out
+    Ignored:    code/simulation/slurm-15466799_171.out
+    Ignored:    code/simulation/slurm-15466799_172.out
+    Ignored:    code/simulation/slurm-15466799_173.out
+    Ignored:    code/simulation/slurm-15466799_174.out
+    Ignored:    code/simulation/slurm-15466799_175.out
+    Ignored:    code/simulation/slurm-15466799_176.out
+    Ignored:    code/simulation/slurm-15466799_177.out
+    Ignored:    code/simulation/slurm-15466799_178.out
+    Ignored:    code/simulation/slurm-15466799_179.out
+    Ignored:    code/simulation/slurm-15466799_18.out
+    Ignored:    code/simulation/slurm-15466799_180.out
+    Ignored:    code/simulation/slurm-15466799_181.out
+    Ignored:    code/simulation/slurm-15466799_182.out
+    Ignored:    code/simulation/slurm-15466799_183.out
+    Ignored:    code/simulation/slurm-15466799_184.out
+    Ignored:    code/simulation/slurm-15466799_185.out
+    Ignored:    code/simulation/slurm-15466799_186.out
+    Ignored:    code/simulation/slurm-15466799_187.out
+    Ignored:    code/simulation/slurm-15466799_188.out
+    Ignored:    code/simulation/slurm-15466799_189.out
+    Ignored:    code/simulation/slurm-15466799_19.out
+    Ignored:    code/simulation/slurm-15466799_190.out
+    Ignored:    code/simulation/slurm-15466799_191.out
+    Ignored:    code/simulation/slurm-15466799_192.out
+    Ignored:    code/simulation/slurm-15466799_193.out
+    Ignored:    code/simulation/slurm-15466799_194.out
+    Ignored:    code/simulation/slurm-15466799_195.out
+    Ignored:    code/simulation/slurm-15466799_196.out
+    Ignored:    code/simulation/slurm-15466799_197.out
+    Ignored:    code/simulation/slurm-15466799_198.out
+    Ignored:    code/simulation/slurm-15466799_199.out
+    Ignored:    code/simulation/slurm-15466799_2.out
+    Ignored:    code/simulation/slurm-15466799_20.out
+    Ignored:    code/simulation/slurm-15466799_200.out
+    Ignored:    code/simulation/slurm-15466799_21.out
+    Ignored:    code/simulation/slurm-15466799_22.out
+    Ignored:    code/simulation/slurm-15466799_23.out
+    Ignored:    code/simulation/slurm-15466799_24.out
+    Ignored:    code/simulation/slurm-15466799_25.out
+    Ignored:    code/simulation/slurm-15466799_26.out
+    Ignored:    code/simulation/slurm-15466799_27.out
+    Ignored:    code/simulation/slurm-15466799_28.out
+    Ignored:    code/simulation/slurm-15466799_29.out
+    Ignored:    code/simulation/slurm-15466799_3.out
+    Ignored:    code/simulation/slurm-15466799_30.out
+    Ignored:    code/simulation/slurm-15466799_31.out
+    Ignored:    code/simulation/slurm-15466799_32.out
+    Ignored:    code/simulation/slurm-15466799_33.out
+    Ignored:    code/simulation/slurm-15466799_34.out
+    Ignored:    code/simulation/slurm-15466799_35.out
+    Ignored:    code/simulation/slurm-15466799_36.out
+    Ignored:    code/simulation/slurm-15466799_37.out
+    Ignored:    code/simulation/slurm-15466799_38.out
+    Ignored:    code/simulation/slurm-15466799_39.out
+    Ignored:    code/simulation/slurm-15466799_4.out
+    Ignored:    code/simulation/slurm-15466799_40.out
+    Ignored:    code/simulation/slurm-15466799_41.out
+    Ignored:    code/simulation/slurm-15466799_42.out
+    Ignored:    code/simulation/slurm-15466799_43.out
+    Ignored:    code/simulation/slurm-15466799_44.out
+    Ignored:    code/simulation/slurm-15466799_45.out
+    Ignored:    code/simulation/slurm-15466799_46.out
+    Ignored:    code/simulation/slurm-15466799_47.out
+    Ignored:    code/simulation/slurm-15466799_48.out
+    Ignored:    code/simulation/slurm-15466799_49.out
+    Ignored:    code/simulation/slurm-15466799_5.out
+    Ignored:    code/simulation/slurm-15466799_50.out
+    Ignored:    code/simulation/slurm-15466799_51.out
+    Ignored:    code/simulation/slurm-15466799_52.out
+    Ignored:    code/simulation/slurm-15466799_53.out
+    Ignored:    code/simulation/slurm-15466799_54.out
+    Ignored:    code/simulation/slurm-15466799_55.out
+    Ignored:    code/simulation/slurm-15466799_56.out
+    Ignored:    code/simulation/slurm-15466799_57.out
+    Ignored:    code/simulation/slurm-15466799_58.out
+    Ignored:    code/simulation/slurm-15466799_59.out
+    Ignored:    code/simulation/slurm-15466799_6.out
+    Ignored:    code/simulation/slurm-15466799_60.out
+    Ignored:    code/simulation/slurm-15466799_61.out
+    Ignored:    code/simulation/slurm-15466799_62.out
+    Ignored:    code/simulation/slurm-15466799_63.out
+    Ignored:    code/simulation/slurm-15466799_64.out
+    Ignored:    code/simulation/slurm-15466799_65.out
+    Ignored:    code/simulation/slurm-15466799_66.out
+    Ignored:    code/simulation/slurm-15466799_67.out
+    Ignored:    code/simulation/slurm-15466799_68.out
+    Ignored:    code/simulation/slurm-15466799_69.out
+    Ignored:    code/simulation/slurm-15466799_7.out
+    Ignored:    code/simulation/slurm-15466799_70.out
+    Ignored:    code/simulation/slurm-15466799_71.out
+    Ignored:    code/simulation/slurm-15466799_72.out
+    Ignored:    code/simulation/slurm-15466799_73.out
+    Ignored:    code/simulation/slurm-15466799_74.out
+    Ignored:    code/simulation/slurm-15466799_75.out
+    Ignored:    code/simulation/slurm-15466799_76.out
+    Ignored:    code/simulation/slurm-15466799_77.out
+    Ignored:    code/simulation/slurm-15466799_78.out
+    Ignored:    code/simulation/slurm-15466799_79.out
+    Ignored:    code/simulation/slurm-15466799_8.out
+    Ignored:    code/simulation/slurm-15466799_80.out
+    Ignored:    code/simulation/slurm-15466799_81.out
+    Ignored:    code/simulation/slurm-15466799_82.out
+    Ignored:    code/simulation/slurm-15466799_83.out
+    Ignored:    code/simulation/slurm-15466799_84.out
+    Ignored:    code/simulation/slurm-15466799_85.out
+    Ignored:    code/simulation/slurm-15466799_86.out
+    Ignored:    code/simulation/slurm-15466799_87.out
+    Ignored:    code/simulation/slurm-15466799_88.out
+    Ignored:    code/simulation/slurm-15466799_89.out
+    Ignored:    code/simulation/slurm-15466799_9.out
+    Ignored:    code/simulation/slurm-15466799_90.out
+    Ignored:    code/simulation/slurm-15466799_91.out
+    Ignored:    code/simulation/slurm-15466799_92.out
+    Ignored:    code/simulation/slurm-15466799_93.out
+    Ignored:    code/simulation/slurm-15466799_94.out
+    Ignored:    code/simulation/slurm-15466799_95.out
+    Ignored:    code/simulation/slurm-15466799_96.out
+    Ignored:    code/simulation/slurm-15466799_97.out
+    Ignored:    code/simulation/slurm-15466799_98.out
+    Ignored:    code/simulation/slurm-15466799_99.out
+    Ignored:    code/simulation/slurm-15478249_201.out
+    Ignored:    code/simulation/slurm-15478249_202.out
+    Ignored:    code/simulation/slurm-15478249_203.out
+    Ignored:    code/simulation/slurm-15478249_204.out
+    Ignored:    code/simulation/slurm-15478249_205.out
+    Ignored:    code/simulation/slurm-15478249_206.out
+    Ignored:    code/simulation/slurm-15478249_207.out
+    Ignored:    code/simulation/slurm-15478249_208.out
+    Ignored:    code/simulation/slurm-15478249_209.out
+    Ignored:    code/simulation/slurm-15478249_210.out
+    Ignored:    code/simulation/slurm-15478249_211.out
+    Ignored:    code/simulation/slurm-15478249_212.out
+    Ignored:    code/simulation/slurm-15478249_213.out
+    Ignored:    code/simulation/slurm-15478249_214.out
+    Ignored:    code/simulation/slurm-15478249_215.out
+    Ignored:    code/simulation/slurm-15478249_216.out
+    Ignored:    code/simulation/slurm-15478249_217.out
+    Ignored:    code/simulation/slurm-15478249_218.out
+    Ignored:    code/simulation/slurm-15478249_219.out
+    Ignored:    code/simulation/slurm-15478249_220.out
+    Ignored:    code/simulation/slurm-15478249_221.out
+    Ignored:    code/simulation/slurm-15478249_222.out
+    Ignored:    code/simulation/slurm-15478249_223.out
+    Ignored:    code/simulation/slurm-15478249_224.out
+    Ignored:    code/simulation/slurm-15478249_225.out
+    Ignored:    code/simulation/slurm-15478249_226.out
+    Ignored:    code/simulation/slurm-15478249_227.out
+    Ignored:    code/simulation/slurm-15478249_228.out
+    Ignored:    code/simulation/slurm-15478249_229.out
+    Ignored:    code/simulation/slurm-15478249_230.out
+    Ignored:    code/simulation/slurm-15478249_231.out
+    Ignored:    code/simulation/slurm-15478249_232.out
+    Ignored:    code/simulation/slurm-15478249_233.out
+    Ignored:    code/simulation/slurm-15478249_234.out
+    Ignored:    code/simulation/slurm-15478249_235.out
+    Ignored:    code/simulation/slurm-15478249_236.out
+    Ignored:    code/simulation/slurm-15478249_237.out
+    Ignored:    code/simulation/slurm-15478249_238.out
+    Ignored:    code/simulation/slurm-15478249_239.out
+    Ignored:    code/simulation/slurm-15478249_240.out
+    Ignored:    code/simulation/slurm-15530400.out
+    Ignored:    code/simulation/summarize.Rout
+    Ignored:    data/annotation/hg38/gencode.v33.annotation.gtf.gz
+    Ignored:    data/annotation/mm39/
+    Ignored:    data/lung-ont/220928_dge.rds
+    Ignored:    data/lung/fastq/
+    Ignored:    data/lung/index-kallisto/
+    Ignored:    data/lung/index-subread/
+    Ignored:    data/lung/index/
+    Ignored:    ignore/
+    Ignored:    misc/
+    Ignored:    output/lung/
+    Ignored:    output/simulation/
+
+Unstaged changes:
+    Modified:   analysis/lung.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/simulation-paper.Rmd</code>) and
+HTML (<code>docs/simulation-paper.html</code>) files. If you’ve
+configured a remote Git repository (see <code>?wflow_git_remote</code>),
+click on the hyperlinks in the table below to view the files as they
+were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/bebf9467a656497c42cb2a8f1a7e2e512b364682/analysis/simulation-paper.Rmd" target="_blank">bebf946</a>
+</td>
+<td>
+Pedro Baldoni
+</td>
+<td>
+2024-04-05
+</td>
+<td>
+Adding simulation Rmds
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<pre class="r"><code>knitr::opts_chunk$set(dev = &quot;png&quot;,
+                      dpi = 300,
+                      dev.args = list(type = &quot;cairo-png&quot;),
+                      root.dir = &#39;.&#39;,
+                      autodep = TRUE)
+
+options(knitr.kable.NA = &quot;-&quot;)</code></pre>
+<pre class="r"><code>library(data.table)
+library(magrittr)
+library(ggplot2)
+library(patchwork)
+library(plyr)
+library(kableExtra)
+devtools::load_all(&#39;../code/pkg&#39;)</code></pre>
+<pre class="r"><code>path.misc &lt;- file.path(&#39;../misc/simulation.Rmd&#39;)
+dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
+
+path.example &lt;- &quot;../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup&quot;
+
+path.fdr &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;fdr.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.metrics &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;metrics.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.time &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;^time.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.quanttime &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;quanttime.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.quantile &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;quantile.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.pvalue &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;pvalue.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.overdispersion &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;overdispersion.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.roc &lt;-
+  list.files(&#39;../output/simulation/summary&#39;,&#39;roc.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)</code></pre>
+<pre class="r"><code>bs &lt;- 8</code></pre>
+</div>
+<div id="data-loading" class="section level2">
+<h2>Data loading</h2>
+<pre class="r"><code>relabel &lt;- function(x){
+  y &lt;- copy(x)
+  y$TxPerGene %&lt;&gt;% factor(levels = paste0(c(2, 3, 4, 5, 9999), &#39;TxPerGene&#39;),labels = c(paste0(&quot;#Tx/Gene = &quot;, c(2, 3, 4, 5)), &#39;All Transcripts&#39;)) %&lt;&gt;% droplevels()
+  y$LibsPerGroup %&lt;&gt;% factor(levels = paste0(c(3, 5, 10), &#39;libsPerGroup&#39;),labels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10))) %&lt;&gt;% droplevels()
+  y$Quantifier %&lt;&gt;% factor(levels = c(&#39;salmon&#39;,&#39;salmon-gibbs&#39;,&#39;kallisto&#39;),labels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;,&#39;kallisto&#39;)) %&lt;&gt;% droplevels()
+  y$Length %&lt;&gt;% factor(levels = paste0(&#39;readlen-&#39;, seq(50, 150, 25)),labels = paste0(seq(50, 150, 25), &#39;bp&#39;)) %&lt;&gt;% droplevels()
+  if (!is.null(x$Sample)) {
+    y$Sample %&lt;&gt;% factor(levels = c(paste0(&quot;groupA_rep&quot;,1:10,&quot;_R1&quot;),paste0(&quot;groupB_rep&quot;,1:10,&quot;_R1&quot;)),labels = c(paste0(&quot;A&quot;,1:10),paste0(&quot;B&quot;,1:10))) %&lt;&gt;% droplevels()
+  }
+  return(y)
+}
+
+# Loading datasets
+dt.fdr &lt;- do.call(rbind,lapply(path.fdr,fread)) %&gt;% relabel()
+dt.metrics &lt;- do.call(rbind,lapply(path.metrics,fread)) %&gt;% relabel()
+dt.time &lt;- do.call(rbind,lapply(path.time,fread)) %&gt;% relabel()
+dt.quanttime &lt;- do.call(rbind,lapply(path.quanttime,fread)) %&gt;% relabel()
+dt.quantile &lt;- do.call(rbind,lapply(path.quantile,fread)) %&gt;% relabel()
+dt.pvalue &lt;- do.call(rbind,lapply(path.pvalue,fread)) %&gt;% relabel()
+dt.overdispersion &lt;- do.call(rbind,lapply(path.overdispersion,fread)) %&gt;% relabel()
+dt.roc &lt;- do.call(rbind,lapply(path.roc,fread)) %&gt;% relabel()</code></pre>
+</div>
+</div>
+<div id="power" class="section level1">
+<h1>Power</h1>
+<pre class="r"><code>dt.power &lt;- dt.metrics[FC == &#39;fc2&#39; &amp;
+                         Quantifier != &#39;kallisto&#39; &amp;
+                         !grepl(&quot;\\.n|RC&quot;,Method) &amp;
+                         Scenario == &#39;unbalanced&#39;,]
+
+dt.power$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
+dt.power$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
+dt.power$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+dt.power$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),to = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
+
+dt.power[, FDR := roundPretty(ifelse((FP+TP) == 0,NA,100*FP/(FP+TP)),1)]
+
+x.melt &lt;- melt(dt.power,id.vars = colnames(dt.power)[-which(colnames(dt.power) %in% c(&#39;P.SIG&#39;,&#39;TP&#39;,&#39;FP&#39;))],
+               measure.vars = c(&#39;TP&#39;,&#39;FP&#39;),
+               variable.name = &#39;Type&#39;,
+               value.name = &#39;Value&#39;)
+x.melt$Type &lt;-
+  factor(x.melt$Type,
+         levels = c(&#39;FP&#39;,&#39;TP&#39;),
+         labels = c(&#39;False&#39;,&#39;True&#39;))
+
+plot.power &lt;- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size = bs){
+  tb.bar &lt;- df.bar[Scenario == scenario &amp; LibsPerGroup == library,]
+  tb.txt &lt;- df.txt[Scenario == scenario &amp; LibsPerGroup == library,][FDR != &#39;NA&#39;,]
+  gap &lt;- 0.05*max(dt.power$TP + dt.power$FP)
+  ggplot(tb.bar,aes(x = Quantifier,y = Value,fill = Type)) +
+    facet_wrap(facets = &quot;Method&quot;,nrow = 1) +
+    geom_col() +
+    geom_text(aes(x = Quantifier,y = (TP + FP) +  gap,label = FDR),
+              vjust = 0,data = tb.txt,size = base_size/.pt,inherit.aes = FALSE) +
+    scale_fill_manual(values = c(&#39;#ff0000&#39;,&#39;#bebebe&#39;)) +
+    labs(x = NULL,y = paste(&#39;DE Transcripts&#39;)) +
+    scale_y_continuous(limits = c(0,3250)) +
+    theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
+    theme(panel.grid = element_blank(),
+          # axis.text.x = element_text(angle = 90),
+          axis.text = element_text(colour = &#39;black&#39;,size = base_size),
+          strip.text = element_text(size = base_size)) +
+    if (legend == TRUE) theme(legend.background = element_rect(fill = alpha(&#39;white&#39;, 0)),
+                              legend.text = element_text(size = base_size),
+                              legend.position = c(0.95,0.825),
+                              legend.direction = &#39;vertical&#39;,
+                              legend.title = element_blank(),
+                              legend.key.size = unit(0.75,&quot;line&quot;)) else theme(legend.position = &#39;none&#39;)
+}
+
+fig.power &lt;- plot.power(df.bar = x.melt,
+                        df.txt = dt.power,
+                        scenario = &#39;Unequal library sizes&#39;,
+                        library = &#39;5 samples per group&#39;,
+                        legend = TRUE)</code></pre>
+<pre><code>Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2
+3.5.0.
+ℹ Please use the `legend.position.inside` argument of `theme()` instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+generated.</code></pre>
+<pre class="r"><code>fig.power</code></pre>
+<p><img src="figure/simulation-paper.Rmd/simulation_power-1.png" width="1800" style="display: block; margin: auto;" /></p>
+</div>
+<div id="fdr" class="section level1">
+<h1>FDR</h1>
+<pre class="r"><code>dt.fdr.plot &lt;- dt.fdr[FC == &#39;fc2&#39; &amp;
+                        Quantifier != &#39;kallisto&#39; &amp;
+                        !grepl(&quot;\\.n|RC&quot;,Method) &amp;
+                        Scenario == &#39;unbalanced&#39;,]
+
+colmeth &lt;- methodsNames()$color
+names(colmeth) &lt;- gsub(&#39;^edgeR-SC$&#39;,&#39;edgeR-v4&#39;,names(colmeth))
+names(colmeth) &lt;- gsub(&#39;^edgeR.legacy-SC$&#39;,&#39;edgeR-v3&#39;,names(colmeth))
+
+dt.fdr.plot$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
+dt.fdr.plot$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
+dt.fdr.plot$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;)) %&lt;&gt;% factor(levels = c(&#39;Gibbs&#39;,&#39;Bootstrap&#39;))
+dt.fdr.plot$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),to = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
+
+dt.fdr.plot$Method %&lt;&gt;% factor(levels = c(&#39;Swish&#39;,
+                                          &#39;sleuth-Wald&#39;,
+                                          &#39;sleuth-LRT&#39;,
+                                          &#39;edgeR-v3&#39;,
+                                          &#39;edgeR-v4&#39;))
+
+plot.fdr &lt;- function(df.line,scenario,library,legend = FALSE,base_size = bs,color = colmeth,
+                     ylim = c(0,800),xlim = c(0,300),...){
+  tb.bar &lt;- df.line[Scenario == scenario &amp; LibsPerGroup == library,]
+  
+  ggplot(tb.bar,aes(x = N,y = FDR,color = Method,linetype = Quantifier)) +
+    geom_line(linewidth = 0.7) +
+    scale_color_manual(values = color,
+                       breaks = c(&#39;edgeR-v3&#39;,
+                                  &#39;edgeR-v4&#39;,
+                                  &#39;sleuth-LRT&#39;,
+                                  &#39;sleuth-Wald&#39;,
+                                  &#39;Swish&#39;)) +
+    coord_cartesian(xlim = xlim,ylim = ylim) +
+    labs(y = &#39;False discoveries&#39;,x = &#39;Transcripts chosen&#39;) +
+    theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
+    theme(panel.grid = element_blank(),
+          axis.text = element_text(colour = &#39;black&#39;,size = base_size)) +
+    if (legend == TRUE) theme(legend.background = element_rect(fill = alpha(&#39;white&#39;, 0)),
+                              legend.direction = &#39;vertical&#39;,
+                              legend.box = &#39;horizontal&#39;,
+                              legend.position = c(0.4,0.8),
+                              legend.text = element_text(size = base_size),
+                              legend.title = element_blank(),
+                              legend.key.size = unit(0.75,&quot;line&quot;)) else theme(legend.position = &#39;none&#39;)
+}
+
+fig.fdr &lt;- plot.fdr(df.line = dt.fdr.plot[N &lt;= 2500,],
+                    scenario = &#39;Unequal library sizes&#39;,
+                    library = &#39;5 samples per group&#39;,
+                    ylim = c(0,310),
+                    xlim = c(0,2500),
+                    legend = TRUE)
+
+fig.fdr</code></pre>
+<p><img src="figure/simulation-paper.Rmd/simulation_fdr-1.png" width="1050" style="display: block; margin: auto;" /></p>
+</div>
+<div id="roc-curves" class="section level1">
+<h1>ROC curves</h1>
+<pre class="r"><code>dt.rcurve &lt;- dt.roc[FC == &#39;fc2&#39; &amp;
+                      grepl(&quot;edgeR-SC|edgeR-SC\\.n&quot;,Method) &amp;
+                      Scenario == &#39;unbalanced&#39; &amp;
+                      Quantifier != &#39;kallisto&#39;,]
+
+dt.rcurve$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10)),labels = paste0(c(&#39;Three&#39;,&#39;Five&#39;, &#39;Ten&#39;),&#39; samples per group&#39;))
+dt.rcurve$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
+dt.rcurve$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+dt.rcurve$Method %&lt;&gt;%
+  factor(levels = c(paste0(&#39;edgeR-SC.n&#39;,seq(10,90,10)),&#39;edgeR-SC&#39;)) %&lt;&gt;%
+  mapvalues(from = c(paste0(&#39;edgeR-SC.n&#39;,seq(10,90,10)),&#39;edgeR-SC&#39;),to = paste0(seq(10,100,10)))
+
+fig.roc &lt;- ggplot(data = dt.rcurve,aes(x = oFDR,y = oTPR,group = Method,color = Method)) +
+  facet_grid(rows = vars(LibsPerGroup),cols = vars(Quantifier)) +
+  geom_vline(xintercept = c(0.01,0.05,0.1,0.15,0.2),linetype = &#39;dashed&#39;,linewidth = 0.25,color = &#39;gray&#39;) +
+  geom_hline(yintercept = c(0,0.25,0.5,0.75,1),linetype = &#39;dashed&#39;,linewidth = 0.25,color = &#39;gray&#39;) +
+  geom_line(linewidth = 0.5) +
+  geom_point(aes(shape = as.factor(nFDR)),size = 3) +
+  scale_y_continuous(limits = c(0,1)) +
+  scale_x_continuous(limits = c(0,0.2)) +
+  scale_color_viridis_d(direction = -1) +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        legend.text = element_text(colour = &#39;black&#39;,size = bs),
+        axis.text = element_text(colour = &#39;black&#39;,size = bs),
+        strip.text = element_text(colour = &#39;black&#39;,size = bs)) +
+  labs(x = &#39;Observed FDR&#39;,y = &#39;Observed power&#39;,shape = &#39;Nominal FDR&#39;,color = &#39;Resamples&#39;)
+
+fig.roc</code></pre>
+<p><img src="figure/simulation-paper.Rmd/simulation_roc-1.png" width="1800" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>dt.rcurve.gibbs &lt;- dt.rcurve[Quantifier == &#39;Gibbs&#39;,]
+dt.rcurve.boot &lt;- dt.rcurve[Quantifier == &#39;Bootstrap&#39;,]
+
+setnames(dt.rcurve.gibbs,old = c(&#39;oTPR&#39;),new = &#39;oTPR.Gibbs&#39;)
+setnames(dt.rcurve.boot,old = c(&#39;oTPR&#39;),new = &#39;oTPR.Bootstrap&#39;)
+
+dt.rcurve.boot &lt;- 
+  merge(dt.rcurve.boot,
+        dt.rcurve.gibbs[,c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;nFDR&#39;,&#39;oTPR.Gibbs&#39;)],
+        by = c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;nFDR&#39;),all.x = TRUE,sort = FALSE)
+
+dt.rcurve.boot[,round(mean(oTPR.Gibbs/oTPR.Bootstrap),1),by = c(&#39;LibsPerGroup&#39;,&#39;nFDR&#39;)]</code></pre>
+<pre><code>               LibsPerGroup  nFDR    V1
+                     &lt;fctr&gt; &lt;num&gt; &lt;num&gt;
+ 1:   Ten samples per group  0.01   1.0
+ 2:   Ten samples per group  0.05   1.0
+ 3:   Ten samples per group  0.10   1.0
+ 4:   Ten samples per group  0.15   1.0
+ 5:   Ten samples per group  0.20   1.0
+ 6: Three samples per group  0.01   0.9
+ 7: Three samples per group  0.05   1.0
+ 8: Three samples per group  0.10   1.0
+ 9: Three samples per group  0.15   1.0
+10: Three samples per group  0.20   1.0
+11:  Five samples per group  0.01   1.0
+12:  Five samples per group  0.05   1.0
+13:  Five samples per group  0.10   1.0
+14:  Five samples per group  0.15   1.0
+15:  Five samples per group  0.20   1.0</code></pre>
+<pre class="r"><code>ggplot(data = dt.rcurve.boot,aes(x = oFDR,y = (oTPR.Gibbs/oTPR.Bootstrap),
+                                 group = interaction(Method),color = Method)) +
+  facet_grid(rows = vars(LibsPerGroup),scales = &#39;free&#39;) +
+  geom_line(linewidth = 0.5) +
+  geom_point(aes(shape = as.factor(nFDR)),size = 3) +
+  geom_vline(xintercept = c(0.01,0.05,0.1,0.15,0.2),linetype = &#39;dashed&#39;,linewidth = 0.25,color = &#39;gray&#39;) +
+  geom_hline(yintercept = 1,linetype = &#39;solid&#39;,linewidth = 1,color = &#39;gray&#39;) +
+  scale_x_continuous(limits = c(0,0.2)) +
+  scale_color_viridis_d(direction = -1)  +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        legend.text = element_text(colour = &#39;black&#39;,size = bs),
+        axis.text = element_text(colour = &#39;black&#39;,size = bs),
+        strip.text = element_text(colour = &#39;black&#39;,size = bs)) +
+  labs(x = &#39;Observed Bootstrap FDR&#39;,y = &#39;Observed (Gibbs/Bootstrap) TPR&#39;,shape = &#39;Nominal FDR&#39;,color = &#39;Resamples&#39;)</code></pre>
+<p><img src="figure/simulation-paper.Rmd/simulation_roc_ratio-1.png" width="1800" style="display: block; margin: auto;" /></p>
+</div>
+<div id="error-rate" class="section level1">
+<h1>Error rate</h1>
+<pre class="r"><code>dt.type1error &lt;- dt.metrics[FC == &#39;fc1&#39; &amp;
+                              Quantifier == &#39;Salmon-Gibbs&#39; &amp;
+                              !grepl(&quot;\\.n|RC&quot;,Method) &amp;
+                              Scenario == &#39;unbalanced&#39;,]
+
+dt.type1error$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
+dt.type1error$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
+dt.type1error$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Gibbs&#39;),labels = c(&#39;Gibbs&#39;))
+dt.type1error$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;,&#39;sleuth-LRT&#39;,&#39;sleuth-Wald&#39;,&#39;Swish&#39;),to = c(&#39;edgeR\nv4&#39;,&#39;edgeR\nv3&#39;,&#39;sleuth\nLRT&#39;,&#39;sleuth\nWald&#39;,&#39;Swish&#39;))
+
+x.melt &lt;-
+  melt(dt.type1error,
+       id.vars = colnames(dt.type1error)[-which(colnames(dt.type1error) %in% c(&#39;P.SIG&#39;,&#39;TP&#39;,&#39;FP&#39;))],
+       measure.vars = c(&#39;P.SIG&#39;),variable.name = &#39;Type&#39;,value.name = &#39;Value&#39;)
+
+plot.type1error &lt;- function(df.bar,scenario,library,legend = FALSE,base_size = bs){
+  tb.bar &lt;- df.bar[Scenario == scenario &amp; LibsPerGroup == library,]
+  ggplot(tb.bar,aes(x = Method,y = Value)) +
+    geom_col(fill = &quot;#bebebe&quot;) +
+    geom_hline(yintercept = 0.05,color = &#39;#ff0000&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
+    labs(x = NULL,y = paste(&#39;Type 1 error rate&#39;)) +
+    scale_y_continuous(limits = c(0,0.06),breaks = seq(0,0.06,0.01)) +
+    theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
+    theme(panel.grid = element_blank(),
+          axis.text.x = element_text(angle = 0),
+          axis.text = element_text(colour = &#39;black&#39;,size = base_size))
+}
+
+fig.type1error &lt;- plot.type1error(df.bar = x.melt,
+                                  scenario = &#39;Unequal library sizes&#39;,
+                                  library = &#39;5 samples per group&#39;)
+
+fig.type1error</code></pre>
+<p><img src="figure/simulation-paper.Rmd/simulation_error-1.png" width="900" style="display: block; margin: auto;" /></p>
+</div>
+<div id="quantification-time" class="section level1">
+<h1>Quantification time</h1>
+<pre class="r"><code>dt.salmontime &lt;- dt.quanttime[Quantifier != &#39;kallisto&#39;,
+                              .(TotalTime = mean(Time)/60,
+                                ResamplingTime = mean(ResamplingTime)/60),
+                              by = c(&#39;LibSize&#39;,&#39;Quantifier&#39;)]
+
+dt.salmontime$QuantTime &lt;- dt.salmontime$TotalTime - dt.salmontime$ResamplingTime
+setcolorder(dt.salmontime,c(&#39;Quantifier&#39;,&#39;LibSize&#39;,&#39;QuantTime&#39;,&#39;ResamplingTime&#39;,&#39;TotalTime&#39;))
+
+dt.salmontime$LibSize %&lt;&gt;% factor(levels = c(&#39;2.5e+07&#39;,&#39;5e+07&#39;,&#39;1e+08&#39;),
+                                  labels = c(&#39;25&#39;,&#39;50&#39;,&#39;100&#39;))
+
+dt.salmontime$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),
+                                     labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+
+dt.salmontime &lt;- dt.salmontime[order(Quantifier,LibSize),]
+
+cnames &lt;- c(&#39;Resampling\nMethod&#39;,
+            &#39;Library Size\n(million read pairs)&#39;,
+            &#39;Optimization&#39;,
+            &#39;Resampling&#39;,
+            &#39;Total&#39;)
+
+tb.salmontime &lt;- kbl(x = dt.salmontime,
+                     format = &#39;latex&#39;,
+                     digits = 2,
+                     col.names = linebreak(cnames,align = &#39;c&#39;),
+                     align = &#39;ccccc&#39;,
+                     escape = FALSE,
+                     booktabs = TRUE) %&gt;%
+  add_header_above(c(&quot; &quot; = 2, &quot;Quantification Time (minutes)&quot; = 3)) %&gt;%
+  collapse_rows(1, latex_hline = &#39;major&#39;)</code></pre>
+</div>
+<div id="edger-comparison" class="section level1">
+<h1>edgeR comparison</h1>
+<pre class="r"><code>dt.dte &lt;- merge(x = dt.time[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$&quot;,Method) &amp;
+                              grepl(&quot;Salmon&quot;,Quantifier) &amp;
+                              Scenario == &#39;unbalanced&#39; &amp;
+                              FC == &#39;fc2&#39;,c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;Quantifier&#39;,&#39;Time&#39;)],
+                y = dt.roc[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$&quot;,Method) &amp;
+                             grepl(&quot;Salmon&quot;,Quantifier) &amp;
+                             Scenario == &#39;unbalanced&#39; &amp;
+                             FC == &#39;fc2&#39; &amp;
+                             nFDR == 0.05,c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;Quantifier&#39;,&#39;oTPR&#39;,&#39;oFDR&#39;)],
+                by = c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;Quantifier&#39;),
+                all.x = TRUE)
+
+dt.dte[,Time := 60*Time]
+
+dt.dte$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;,c(3,5,10)),
+                                labels = c(&#39;Three&#39;,&#39;Five&#39;,&#39;Ten&#39;))
+
+dt.dte$Method %&lt;&gt;% factor(levels = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),
+                          labels = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
+
+dt.dte$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),
+                              labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+
+dt.dte.edger &lt;- dt.dte[Method == &#39;edgeR-v4&#39;,]
+setnames(dt.dte.edger,
+         old = c(&#39;Time&#39;,&#39;oTPR&#39;,&#39;oFDR&#39;),
+         new = c(&#39;Time.edgeR&#39;,&#39;oTPR.edgeR&#39;,&#39;oFDR.edgeR&#39;))
+dt.dte.edger.legacy &lt;- dt.dte[Method != &#39;edgeR-v4&#39;,]
+setnames(dt.dte.edger.legacy,
+         old = c(&#39;Time&#39;,&#39;oTPR&#39;,&#39;oFDR&#39;),
+         new = c(&#39;Time.edgeRLegacgy&#39;,&#39;oTPR.edgeRLegacgy&#39;,&#39;oFDR.edgeRLegacgy&#39;))
+
+dt.dte &lt;- merge(dt.dte.edger.legacy[,-2],dt.dte.edger[,-2],
+                by = c(&#39;LibsPerGroup&#39;,&#39;Quantifier&#39;),
+                all.x = TRUE,
+                sort = FALSE)
+
+cnames &lt;- c(&#39;Samples per\nGroup&#39;,
+            &#39;Sampling\nMethod&#39;,
+            &#39;Time&#39;,
+            &#39;Power&#39;,
+            &#39;FDR&#39;,
+            &#39;Time&#39;,
+            &#39;Power&#39;,
+            &#39;FDR&#39;)
+
+tb.dte &lt;- kbl(x = dt.dte,
+              digits = 2,
+              format = &#39;latex&#39;,
+              escape = FALSE,
+              booktabs = TRUE,
+              col.names = linebreak(cnames,align = &#39;c&#39;),
+              align = &#39;llcccccc&#39;) %&gt;%
+  add_header_above(c(&quot; &quot; = 2, &quot;edgeR-v3&quot; = 3,&quot;edgeR-v4&quot; = 3)) %&gt;%
+  collapse_rows(1, latex_hline = &#39;major&#39;)</code></pre>
+</div>
+<div id="output-files" class="section level1">
+<h1>Output files</h1>
+<pre class="r"><code>fig.metrics &lt;- wrap_plots(A = fig.power,
+                          B = fig.fdr,
+                          C = fig.type1error,
+                          design = c(area(1,1,1,2),area(2,1),area(2,2)),
+                          heights = c(0.3,0.7),widths = c(3.5/6,1-3.5/6)) + 
+  plot_annotation(tag_levels = &#39;a&#39;,
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+ggsave(plot = fig.metrics,filename = file.path(path.misc,&#39;Figure-Metrics.pdf&#39;),
+       device = &#39;pdf&#39;,width = 6,height = 5,units = &#39;in&#39;,dpi = 300)
+
+ggsave(plot = fig.roc,filename = file.path(path.misc,&#39;Figure-ROC.pdf&#39;),
+       device = &#39;pdf&#39;,width = 6,height = 5,units = &#39;in&#39;,dpi = 300)
+
+save_kable(tb.salmontime,file = file.path(path.misc,&#39;Table-QuantTime.tex&#39;))
+save_kable(tb.dte,file = file.path(path.misc,&#39;Table-DTETime.tex&#39;))</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: CentOS Linux 7 (Core)
+
+Matrix products: default
+BLAS:   /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRblas.so 
+LAPACK: /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRlapack.so;  LAPACK version 3.11.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] pkg_1.0           kableExtra_1.4.0  plyr_1.8.9        patchwork_1.2.0  
+[5] ggplot2_3.5.0     magrittr_2.0.3    data.table_1.15.0 workflowr_1.7.1  
+
+loaded via a namespace (and not attached):
+  [1] splines_4.3.2                 later_1.3.2                  
+  [3] BiocIO_1.12.0                 bitops_1.0-7                 
+  [5] filelock_1.0.3                R.oo_1.26.0                  
+  [7] tibble_3.2.1                  XML_3.99-0.16.1              
+  [9] lifecycle_1.0.4               edgeR_4.0.16                 
+ [11] rprojroot_2.0.4               processx_3.8.3               
+ [13] lattice_0.22-5                ensembldb_2.26.0             
+ [15] limma_3.58.1                  sass_0.4.8                   
+ [17] rmarkdown_2.25                jquerylib_0.1.4              
+ [19] yaml_2.3.8                    remotes_2.4.2.1              
+ [21] httpuv_1.6.14                 sessioninfo_1.2.2            
+ [23] pkgbuild_1.4.3                DBI_1.2.2                    
+ [25] abind_1.4-5                   pkgload_1.3.4                
+ [27] zlibbioc_1.48.0               GenomicRanges_1.54.1         
+ [29] R.utils_2.12.3                purrr_1.0.2                  
+ [31] AnnotationFilter_1.26.0       BiocGenerics_0.48.1          
+ [33] RCurl_1.98-1.14               rappdirs_0.3.3               
+ [35] git2r_0.33.0                  GenomeInfoDbData_1.2.11      
+ [37] wasabi_1.0.1                  IRanges_2.36.0               
+ [39] S4Vectors_0.40.2              fishpond_2.8.0               
+ [41] svglite_2.1.3                 codetools_0.2-19             
+ [43] DelayedArray_0.28.0           xml2_1.3.6                   
+ [45] tidyselect_1.2.0              farver_2.1.1                 
+ [47] matrixStats_1.2.0             stats4_4.3.2                 
+ [49] BiocFileCache_2.10.1          showtext_0.9-6               
+ [51] GenomicAlignments_1.38.2      jsonlite_1.8.8               
+ [53] ellipsis_0.3.2                systemfonts_1.0.5            
+ [55] tools_4.3.2                   progress_1.2.3               
+ [57] ragg_1.2.7                    Rcpp_1.0.12                  
+ [59] glue_1.7.0                    svMisc_1.2.3                 
+ [61] SparseArray_1.2.4             xfun_0.42                    
+ [63] MatrixGenerics_1.14.0         usethis_2.2.3                
+ [65] GenomeInfoDb_1.38.6           dplyr_1.1.4                  
+ [67] withr_3.0.0                   BiocManager_1.30.22          
+ [69] fastmap_1.1.1                 rhdf5filters_1.14.1          
+ [71] fansi_1.0.6                   callr_3.7.5                  
+ [73] digest_0.6.34                 R6_2.5.1                     
+ [75] mime_0.12                     textshaping_0.3.7            
+ [77] colorspace_2.1-0              gtools_3.9.5                 
+ [79] biomaRt_2.58.2                RSQLite_2.3.5                
+ [81] R.methodsS3_1.8.2             utf8_1.2.4                   
+ [83] generics_0.1.3                tximeta_1.20.3               
+ [85] rtracklayer_1.62.0            prettyunits_1.2.0            
+ [87] httr_1.4.7                    htmlwidgets_1.6.4            
+ [89] S4Arrays_1.2.0                whisker_0.4.1                
+ [91] pkgconfig_2.0.3               gtable_0.3.4                 
+ [93] blob_1.2.4                    SingleCellExperiment_1.24.0  
+ [95] XVector_0.42.0                htmltools_0.5.7              
+ [97] sysfonts_0.8.8                profvis_0.3.8                
+ [99] ProtGenerics_1.34.0           sleuth_0.30.0                
+[101] scales_1.3.0                  Biobase_2.62.0               
+[103] Rsubread_2.16.1               png_0.1-8                    
+[105] knitr_1.45                    rstudioapi_0.15.0            
+[107] tzdb_0.4.0                    rjson_0.2.21                 
+[109] curl_5.2.0                    showtextdb_3.0               
+[111] cachem_1.0.8                  rhdf5_2.46.1                 
+[113] stringr_1.5.1                 BiocVersion_3.18.1           
+[115] parallel_4.3.2                miniUI_0.1.1.1               
+[117] AnnotationDbi_1.64.1          restfulr_0.0.15              
+[119] desc_1.4.3                    pillar_1.9.0                 
+[121] grid_4.3.2                    vctrs_0.6.5                  
+[123] urlchecker_1.0.1              promises_1.2.1               
+[125] dbplyr_2.4.0                  xtable_1.8-4                 
+[127] tximport_1.30.0               evaluate_0.23                
+[129] readr_2.1.5                   GenomicFeatures_1.54.3       
+[131] locfit_1.5-9.8                cli_3.6.2                    
+[133] compiler_4.3.2                Rsamtools_2.18.0             
+[135] rlang_1.1.3                   crayon_1.5.2                 
+[137] labeling_0.4.3                ps_1.7.6                     
+[139] getPass_0.2-4                 fs_1.6.3                     
+[141] stringi_1.8.3                 viridisLite_0.4.2            
+[143] BiocParallel_1.36.0           munsell_0.5.0                
+[145] Biostrings_2.70.2             lazyeval_0.2.2               
+[147] devtools_2.4.5                Matrix_1.6-5                 
+[149] hms_1.1.3                     bit64_4.0.5                  
+[151] Rhdf5lib_1.24.2               KEGGREST_1.42.0              
+[153] statmod_1.5.0                 shiny_1.8.0                  
+[155] highr_0.10                    SummarizedExperiment_1.32.0  
+[157] interactiveDisplayBase_1.40.0 AnnotationHub_3.10.0         
+[159] memoise_2.0.1                 thematic_0.1.5               
+[161] bslib_0.6.1                   bit_4.0.5                    </code></pre>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
