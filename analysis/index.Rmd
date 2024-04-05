@@ -8,4 +8,22 @@ editor_options:
   chunk_output_type: console
 ---
 
-This website hosts code for the Gibbs DTE pipeline paper, which presents an optimized DTE pipeline via Gibbs resampling with `catchSalmon` from the R/Bioconductor package [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html). 
+This website hosts code for the Gibbs DTE pipeline paper, which presents an optimized differential transcript expression (DTE) pipeline using the latest version of the R/Bioconductor package [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html) and the Gibbs sampling algorithm from [Salmon](https://salmon.readthedocs.io/). 
+
+The presented pipeline builds upon the latest developments of `edgeR` 4.0, which include a new bias-corrected quasi-likelihood (QL) method with adjusted deviances for small counts, and the efficient Gibbs sampling algorithm from `Salmon`. A review paper from `edgeR` 4.0 has been preprinted by [Chen et al.](https://doi.org/10.1101/2024.01.21.576131). The new pipeline is faster, more powerful, and provides better control of false discoveries.
+
+
+## Simulation study
+
+The pages below present the necessary steps to rerun our simulation study and the code used to generate the figures and tables from the main and supplementary texts of the transcript-level differential expression paper.
+
+* [Rerunning the simulation study](simulation-howto.html)
+* [Results from the main article](simulation-paper.html)
+* [Results from the supplement](simulation-supp.html)
+
+## Case study
+
+The pages below present the data pre-processing steps and analysis report of the RNA-seq experiments from the human cancer cell lines H1975 and HCC827 (GEO accession [GSE172421](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE172421)).
+
+* [Data pre-processing](lung-howto.html)
+* [Analysis report](lung.html)
