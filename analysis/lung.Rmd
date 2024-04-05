@@ -376,7 +376,7 @@ alcpm.cut <- cut(alcpm,breaks = c(-Inf, 1, Inf),
 names(alcpm.cut) <- names(alcpm)
 ```
 
-```{r lung_conv}
+```{r lung_conv,results='hide'}
 foo <- function(b){
   cs.kallisto <- 
     catchKallisto2(paths = list.dirs(file.path(path.lung,'kallisto'),recursive = FALSE),
@@ -413,7 +413,7 @@ foo <- function(b){
   return(rta)
 }
 
-rta.out <- bplapply(bseq,foo,BPPARAM = BPPARAM)
+rta.out <- lapply(bseq,foo)
 df.rta <- rbindlist(rta.out)
 ```
 
