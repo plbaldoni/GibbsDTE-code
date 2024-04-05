@@ -1,7 +1,7 @@
 methodsNames <- function(){
   method <- c(c('edger-raw','edger-scaled','edger-new-raw','edger-new-scaled','sleuth-lrt','sleuth-wt','swish'),paste0('edger-scaled-n',seq(10,90,10)),paste0('edger-new-scaled-n',seq(10,90,10)))
   labels <- c('edgeR.legacy-RC','edgeR.legacy-SC','edgeR-RC','edgeR-SC','sleuth-LRT','sleuth-Wald','Swish',paste0('edgeR.legacy-SC.n',seq(10,90,10)),paste0('edgeR-SC.n',seq(10,90,10)))
-  color <- c(okabe_ito(length(method))[c(1,2,6,7,3,4,5)],rep('black',9),rep('black',9)) # To match TranscriptDE paper
+  color <- c(c('black','orange','black','blue',"purple","green3","gray"),rep('black',9),rep('black',9)) # To match TranscriptDE paper
 
   names(method) <- names(color) <- labels
   return(list(labels = labels,method = method,color = color))
