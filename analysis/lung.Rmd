@@ -1267,8 +1267,12 @@ dev.off()
 fig.HABP2 <- readPNG(HABP2, native = TRUE)
 fig.BBC3 <- readPNG(BBC3, native = TRUE)
 
-include_graphics(HABP2)
-include_graphics(BBC3)
+fig.coverage <- wrap_elements(fig.HABP2) + wrap_elements(fig.BBC3)
+fig.coverage <- fig.coverage +
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+fig.coverage
 ```
 
 # Output files
