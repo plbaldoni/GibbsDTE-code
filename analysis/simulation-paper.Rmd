@@ -236,37 +236,6 @@ fig.roc <- ggplot(data = dt.rcurve,aes(x = oFDR,y = oTPR,group = Method,color = 
 fig.roc
 ```
 
-```{r simulation_roc_ratio,fig.width = 6,fig.height = 6}
-dt.rcurve.gibbs <- dt.rcurve[Quantifier == 'Gibbs',]
-dt.rcurve.boot <- dt.rcurve[Quantifier == 'Bootstrap',]
-
-setnames(dt.rcurve.gibbs,old = c('oTPR'),new = 'oTPR.Gibbs')
-setnames(dt.rcurve.boot,old = c('oTPR'),new = 'oTPR.Bootstrap')
-
-dt.rcurve.boot <- 
-  merge(dt.rcurve.boot,
-        dt.rcurve.gibbs[,c('LibsPerGroup','Method','nFDR','oTPR.Gibbs')],
-        by = c('LibsPerGroup','Method','nFDR'),all.x = TRUE,sort = FALSE)
-
-dt.rcurve.boot[,round(mean(oTPR.Gibbs/oTPR.Bootstrap),1),by = c('LibsPerGroup','nFDR')]
-
-ggplot(data = dt.rcurve.boot,aes(x = oFDR,y = (oTPR.Gibbs/oTPR.Bootstrap),
-                                 group = interaction(Method),color = Method)) +
-  facet_grid(rows = vars(LibsPerGroup),scales = 'free') +
-  geom_line(linewidth = 0.5) +
-  geom_point(aes(shape = as.factor(nFDR)),size = 3) +
-  geom_vline(xintercept = c(0.01,0.05,0.1,0.15,0.2),linetype = 'dashed',linewidth = 0.25,color = 'gray') +
-  geom_hline(yintercept = 1,linetype = 'solid',linewidth = 1,color = 'gray') +
-  scale_x_continuous(limits = c(0,0.2)) +
-  scale_color_viridis_d(direction = -1)  +
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        legend.text = element_text(colour = 'black',size = bs),
-        axis.text = element_text(colour = 'black',size = bs),
-        strip.text = element_text(colour = 'black',size = bs)) +
-  labs(x = 'Observed Bootstrap FDR',y = 'Observed (Gibbs/Bootstrap) TPR',shape = 'Nominal FDR',color = 'Resamples')
-```
-
 # Error rate
 
 ```{r simulation_error,fig.width = 3,fig.height = 3}
@@ -339,6 +308,16 @@ tb.salmontime <- kbl(x = dt.salmontime,
                      booktabs = TRUE) %>%
   add_header_above(c(" " = 2, "Quantification Time (minutes)" = 3)) %>%
   collapse_rows(1, latex_hline = 'major')
+
+kbl(x = dt.salmontime,
+    format = 'pipe',
+    digits = 2,
+    col.names = linebreak(cnames,align = 'c'),
+    align = 'ccccc',
+    escape = FALSE,
+    booktabs = TRUE) %>%
+  add_header_above(c(" " = 2, "Quantification Time (minutes)" = 3)) %>%
+  collapse_rows(1, latex_hline = 'major')
 ```
 
 # edgeR comparison
@@ -397,6 +376,16 @@ tb.dte <- kbl(x = dt.dte,
               booktabs = TRUE,
               col.names = linebreak(cnames,align = 'c'),
               align = 'llcccccc') %>%
+  add_header_above(c(" " = 2, "edgeR-v3" = 3,"edgeR-v4" = 3)) %>%
+  collapse_rows(1, latex_hline = 'major')
+
+kbl(x = dt.dte,
+    digits = 2,
+    format = 'pipe',
+    escape = FALSE,
+    booktabs = TRUE,
+    col.names = linebreak(cnames,align = 'c'),
+    align = 'llcccccc') %>%
   add_header_above(c(" " = 2, "edgeR-v3" = 3,"edgeR-v4" = 3)) %>%
   collapse_rows(1, latex_hline = 'major')
 ```

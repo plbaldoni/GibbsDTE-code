@@ -163,26 +163,26 @@ fig.power.salmon.10 <- make.plot.power(x = dt.power,
                                        library = '10 samples per group',
                                        quantifier = c('Bootstrap\nSalmon',
                                                       'Gibbs\nSalmon'),
-                                      ylim = c(0,5000))
+                                       ylim = c(0,5000))
 
 fig.power.kallisto.3 <- make.plot.power(x = dt.power,
                                         scenario = 'Unequal library sizes',
                                         library = '3 samples per group',
                                         quantifier = c('Bootstrap\nkallisto',
                                                        'Gibbs\nSalmon'),
-                                      ylim = c(0,3250))
+                                        ylim = c(0,3250))
 fig.power.kallisto.5 <- make.plot.power(x = dt.power,
                                         scenario = 'Unequal library sizes',
                                         library = '5 samples per group',
                                         quantifier = c('Bootstrap\nkallisto',
                                                        'Gibbs\nSalmon'),
-                                      ylim = c(0,3250))
+                                        ylim = c(0,3250))
 fig.power.kallisto.10 <- make.plot.power(x = dt.power,
                                          scenario = 'Unequal library sizes',
                                          library = '10 samples per group',
                                          quantifier = c('Bootstrap\nkallisto',
                                                         'Gibbs\nSalmon'),
-                                      ylim = c(0,5000))
+                                         ylim = c(0,5000))
 
 fig.power.salmon.3
 fig.power.salmon.10
@@ -348,6 +348,16 @@ tb.salmontime <- kbl(x = dt.salmontime,
                      align = 'ccccc',
                      escape = FALSE,
                      booktabs = TRUE) %>%
+  add_header_above(c(" " = 2, "Quantification Time (minutes)" = 3)) %>%
+  collapse_rows(1, latex_hline = 'major')
+
+kbl(x = dt.salmontime,
+    format = 'pipe',
+    digits = 2,
+    col.names = linebreak(cnames,align = 'c'),
+    align = 'ccccc',
+    escape = FALSE,
+    booktabs = TRUE) %>%
   add_header_above(c(" " = 2, "Quantification Time (minutes)" = 3)) %>%
   collapse_rows(1, latex_hline = 'major')
 ```
