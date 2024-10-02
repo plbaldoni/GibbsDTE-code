@@ -1,10 +1,10 @@
 #' @importFrom sleuth sleuth_prep sleuth_fit sleuth_lrt sleuth_wt sleuth_results
 runSleuth <- function(targets,test,quantifier){
-  se <- 
+  se <-
     sleuth_prep(sample_to_covariates = targets,full_model = ~ group,num_cores = 1)
-  
+
   se <- sleuth_fit(obj = se, fit_name = 'full')
-  
+
   if (test == 'lrt') {
     test.label <- 'reduced:full'
     se <- sleuth_fit(obj = se,formula = ~ 1, fit_name = 'reduced')
@@ -13,13 +13,13 @@ runSleuth <- function(targets,test,quantifier){
     test.label <- 'groupB'
     se <- sleuth_wt(obj = se,which_beta = test.label,which_model = 'full')
   }
-  
+
   out <-
     sleuth_results(obj = se,test = test.label,test_type = test,show_all = FALSE)
-  
+
   out <- cbind('feature' = out$target_id,out)
   out$target_id <- NULL
-  
+
   return(out)
 }
 
@@ -34,7 +34,7 @@ runSwish <- function(targets,quantifier){
     type <- 'kallisto'
     targets$files <- file.path(targets$path,'abundance.h5')
   }
-  
+
   se <- tximeta(coldata = targets,type = type)
   se <- scaleInfReps(se)
   se <- labelKeep(se)
@@ -48,23 +48,23 @@ runSwish <- function(targets,quantifier){
 #' @importFrom edgeR calcNormFactors estimateDisp glmQLFit glmQLFTest topTags
 runEdgeR <- function(targets,quantifier,scaled,legacy,...){
   if (grepl('salmon',quantifier)) {
-    se <- catchSalmon2(paths = targets$path,...) 
+    se <- catchSalmon2(paths = targets$path,...)
   } else{
     se <- catchKallisto2(paths = targets$path,...)
   }
-  
+
   if (scaled) {
-    dge <- DGEList(counts = se$counts/se$annotation$Overdispersion, 
+    dge <- DGEList(counts = se$counts/se$annotation$Overdispersion,
                    samples = targets,
                    group = targets$group,
                    genes = se$annotation)
   } else{
-    dge <- DGEList(counts = se$counts, 
+    dge <- DGEList(counts = se$counts,
                    samples = targets,
                    group = targets$group,
                    genes = se$annotation)
   }
-  
+
   keep <- filterByExpr(dge)
   dge <- dge[keep, , keep.lib.sizes = FALSE]
   dge <- calcNormFactors(dge)
@@ -75,61 +75,63 @@ runEdgeR <- function(targets,quantifier,scaled,legacy,...){
   fit <- glmQLFit(dge,design,legacy = legacy)
   qlf <- glmQLFTest(fit,coef = 2)
   out <- topTags(qlf,n = Inf)
-  
+
   cbind('feature' = rownames(out$table),out$table)
 }
 
-callMethods <- function(targets,quantifier){
+callMethods <- function(targets,quantifier,run.edger.only){
 
   res <- list()
   time <- list()
-  
-  time[['sleuth-lrt']] <-
-    system.time({res[['sleuth-lrt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'lrt')})
-  
-  time[['sleuth-wt']] <-
-    system.time({res[['sleuth-wt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'wt')})
-  
-  time[['swish']] <-
-    system.time({res[['swish']] <- runSwish(targets = targets, quantifier = quantifier)})
-  
+
+  if(!run.edger.only){
+    time[['sleuth-lrt']] <-
+      system.time({res[['sleuth-lrt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'lrt')})
+
+    time[['sleuth-wt']] <-
+      system.time({res[['sleuth-wt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'wt')})
+
+    time[['swish']] <-
+      system.time({res[['swish']] <- runSwish(targets = targets, quantifier = quantifier)})
+  }
+
   time[['edger-scaled']] <-
     system.time({res[['edger-scaled']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = TRUE)})
-  
+
   time[['edger-raw']] <-
     system.time({res[['edger-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = TRUE)})
-  
+
   time[['edger-new-scaled']] <-
     system.time({res[['edger-new-scaled']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = FALSE)})
-  
+
   time[['edger-new-raw']] <-
     system.time({res[['edger-new-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = FALSE)})
-  
+
   # Run edgeR-scaled (both new and old pipelines) with increasing number of bootstrap/Gibbs resamples
-  for (nboot.max in seq(10, 90, 10)) {
+  for (nboot.max in seq(2,3,10, 90, 10)) {
     time[[paste0('edger-scaled-n',nboot.max)]] <-
       system.time({res[[paste0('edger-scaled-n',nboot.max)]] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = TRUE,nboot.max = nboot.max)})
     time[[paste0('edger-new-scaled-n',nboot.max)]] <-
       system.time({res[[paste0('edger-new-scaled-n',nboot.max)]] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = FALSE,nboot.max = nboot.max)})
   }
-  
+
   for (meth.name in names(res)) {
     res[[meth.name]]$feature <- strsplit2(res[[meth.name]]$feature,"\\|")[,1]
   }
-  
-  
+
+
   time <- as.data.frame(do.call(rbind,time))
   time <- cbind('method' = rownames(time),time)
-  
+
   return(list('res' = res, 'time' = time))
 }
 
-runMethods <- function(path,dest,quantifier){
-  
+runMethods <- function(path,dest,quantifier,run.edger.only){
+
   path <- normalizePath(path)
   sample.names <- basename(list.dirs(path,full.names = TRUE,recursive = FALSE))
   sample.names.split <- strsplit2(sample.names,'_')
-  
+
   dir.create(path = dest,recursive = TRUE,showWarnings = FALSE)
   dest <- normalizePath(dest)
   if (file.exists(file.path(dest, 'targets.tsv'))) {
@@ -139,14 +141,14 @@ runMethods <- function(path,dest,quantifier){
 
   targets <- data.frame(group = gsub('group','',sample.names.split[,1]),
                         replicate = gsub('rep','',sample.names.split[,2]))
-  
+
   targets$group <- relevel(as.factor(targets$group),ref = 'A')
   targets$names <- sample.names
   targets$sample <- targets$names
   targets$path <- file.path(path,targets$names)
 
-  out <- callMethods(targets,quantifier)
-  
+  out <- callMethods(targets,quantifier,run.edger.only)
+
   for (meth.name in names(out$res)) {
     write_tsv(x = out$res[[meth.name]],
               file = file.path(dest,paste0(meth.name,'.tsv.gz')),
@@ -156,6 +158,6 @@ runMethods <- function(path,dest,quantifier){
             col_names = TRUE,quote = 'none')
   write_tsv(x = targets,file = file.path(dest,'targets.tsv'),
             col_names = TRUE,quote = 'none')
-  
+
   return(invisible(NULL))
 }

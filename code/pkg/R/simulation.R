@@ -18,8 +18,7 @@ gammaToLogNormal <- function(x,shape,scale){
   return(ylnorm)
 }
 
-simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,
-                         df.bcv = 40, bcv.true = 0.2){
+simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,df.bcv,bcv.true){
   # This function was written with the goal of mimicking the simulation setup
   # used in the voom paper. Specifically, we use goodTuringProportions to
   # estimate baseline abundances, different asymptotic BCV value as well as
@@ -105,7 +104,7 @@ simulateExpr <- function(n.feat,n.libs,lib.sizes,top.cutoff,num.DE,fc,lognormal,
 #' @importFrom data.table setkey copy setnames
 simulateTPM <- function(contigs,contigs.subset,
                         n.libs,lib.sizes,top.cutoff,
-                        num.DE,fc,lognormal){
+                        num.DE,fc,lognormal,df.bcv,bcv.true){
 
   # Generating sample labels
   group <- rep(LETTERS[seq_len(length(n.libs))],times = n.libs)
@@ -116,7 +115,8 @@ simulateTPM <- function(contigs,contigs.subset,
   trExpr <- simulateExpr(n.feat = nrow(contigs.subset),
                          n.libs = n.libs,lib.sizes = lib.sizes,
                          top.cutoff = top.cutoff,num.DE = num.DE,fc = fc,
-                         lognormal = lognormal)
+                         lognormal = lognormal,
+                         df.bcv = df.bcv,bcv.true = bcv.true)
 
   # Generating TPM values
   tpm <- trExpr$expr / contigs.subset$Length
@@ -182,7 +182,7 @@ readFasta <- function(fasta){
 #' @importFrom readr write_tsv
 simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
                           fc,num.DE,top.cutoff,max.tx,genome,BPPARAM,read.length,
-                          fragment.length.min,lognormal){
+                          fragment.length.min,lognormal,df.bcv,bcv.true){
 
   # Checking if simulation has already been run
   dir.create(dest,showWarnings = FALSE,recursive = TRUE)
@@ -206,7 +206,7 @@ simulateFASTQ <- function(fasta,n.libs,lib.sizes,dest,tmpdir,paired.end,
   txTPM <- simulateTPM(contigs = contigs, contigs.subset = contigs.subset,
                        lib.sizes = lib.sizes,n.libs = n.libs,
                        top.cutoff = top.cutoff,num.DE = num.DE,fc = fc,
-                       lognormal = lognormal)
+                       lognormal = lognormal,df.bcv = df.bcv,bcv.true = bcv.true)
 
   # Getting quality reference
   quality.source <- ifelse(read.length %in% c(75, 100),'Rsubread','rfun')
@@ -278,7 +278,10 @@ simulateExperiment <- function(dest,
                                run.salmon = TRUE,
                                run.kallisto = TRUE,
                                run.dte = TRUE,
-                               seed = NULL){
+                               run.edger.only = FALSE,
+                               seed = NULL,
+                               df.bcv = 40,
+                               bcv.true = 0.2){
 
   # Setting up parallel computing
   if (is.null(seed)) {
@@ -302,7 +305,7 @@ simulateExperiment <- function(dest,
                 paired.end = paired.end,num.DE = num.DE,top.cutoff = top.cutoff,
                 genome = genome, max.tx = max.tx,BPPARAM = BPPARAM,
                 read.length = read.length,fragment.length.min = fragment.length.min,
-                lognormal = lognormal)
+                lognormal = lognormal,df.bcv = df.bcv,bcv.true = bcv.true)
 
   # Quantifying FASTQs
   path.targets <- file.path(dest,'meta/targets.tsv.gz')
@@ -314,7 +317,7 @@ simulateExperiment <- function(dest,
 
   # Running methods
   if (isTRUE(run.dte)) {
-    runDTEMethods(dest = file.path(dest),run.salmon = run.salmon, run.kallisto = run.kallisto)
+    runDTEMethods(dest = file.path(dest),run.salmon = run.salmon, run.kallisto = run.kallisto,run.edger.only = run.edger.only)
   }
 
   # Organizing FASTQ files
@@ -328,11 +331,11 @@ simulateExperiment <- function(dest,
   }
 }
 
-runDTEMethods <- function(dest,run.salmon,run.kallisto){
+runDTEMethods <- function(dest,run.salmon,run.kallisto,run.edger.only){
   if (run.salmon) {
     message('Running DTE methods with Salmon quantification (with bootstrap resampling)...')
     dir.create(file.path(dest,'dte-salmon'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon')
+    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon',run.edger.only = run.edger.only)
     if (file.exists(file.path(dest, 'dte-salmon', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
@@ -341,7 +344,7 @@ runDTEMethods <- function(dest,run.salmon,run.kallisto){
 
     message('Running DTE methods with Salmon quantification (with Gibbs resampling)...')
     dir.create(file.path(dest,'dte-salmon-gibbs'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon')
+    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon',run.edger.only = run.edger.only)
     if (file.exists(file.path(dest, 'dte-salmon-gibbs', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
@@ -352,7 +355,7 @@ runDTEMethods <- function(dest,run.salmon,run.kallisto){
   if (run.kallisto) {
     message('Running DTE methods with kallisto quantification...')
     dir.create(file.path(dest,'dte-kallisto'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto')
+    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto',run.edger.only = run.edger.only)
     if (file.exists(file.path(dest, 'dte-kallisto', 'time.tsv'))) {
       message('DTE analysis w/ kallisto completed!')
     } else{
