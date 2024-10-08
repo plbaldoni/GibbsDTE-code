@@ -8,9 +8,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-This website hosts code for the Gibbs DTE pipeline paper, which presents an optimized differential transcript expression (DTE) pipeline using the latest version of the R/Bioconductor package [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html) and the Gibbs sampling algorithm from [Salmon](https://salmon.readthedocs.io/). 
+This website hosts code for the Gibbs DTE pipeline paper, which presents an optimized differential transcript expression (DTE) pipeline using the latest version of the R/Bioconductor package [edgeR v4](https://bioconductor.org/packages/release/bioc/html/edgeR.html) and the Gibbs sampling algorithm from [Salmon](https://salmon.readthedocs.io/). 
 
-The presented pipeline builds upon the latest developments of `edgeR` 4.0, which include a new bias-corrected quasi-likelihood (QL) method with adjusted deviances for small counts, and the efficient Gibbs sampling algorithm from `Salmon`. A review paper from `edgeR` 4.0 has been preprinted by [Chen et al.](https://doi.org/10.1101/2024.01.21.576131). The new pipeline is faster, more powerful, and provides better control of false discoveries.
+The presented pipeline builds upon the latest developments of `edgeR` v4, which include a new bias-corrected quasi-likelihood (QL) method with adjusted deviances for small counts, and the efficient Gibbs sampling algorithm from `Salmon`. A review paper from `edgeR` v4 has been preprinted by [Chen et al.](https://doi.org/10.1101/2024.01.21.576131). The new pipeline is faster, more powerful, and provides better control of false discoveries.
 
 
 ## Simulation study
@@ -18,8 +18,9 @@ The presented pipeline builds upon the latest developments of `edgeR` 4.0, which
 The pages below present the necessary steps to rerun our simulation study and the code used to generate the figures and tables from the main and supplementary texts of the transcript-level differential expression paper.
 
 * [Rerunning the simulation study](simulation-howto.html)
-* [Results from the main article](simulation-paper.html)
-* [Results from the supplement](simulation-supp.html)
+* [Simulation results from the main article](simulation-paper.html)
+* [Simulation results from the supplement I (small-scale simulation)](simulation-supp.html)
+* [Simulation results from the supplement II (large-scale simulation)](simulation-large-supp.html)
 
 ## Case study
 

@@ -1,0 +1,450 @@
+---
+title: "Simulation results from the supplement II (large-scale simulation)"
+author: "Pedro L. Baldoni"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: inline
+---
+
+# Introduction
+
+This Rmarkdown generates Supplementary Figures S11 and S12 from our Gibbs DTE paper. The results are based on the simulation designed to emulate large-scale experiments with large biological variation and sample size, a typical scenario of observational RNA-seq studies with human subjects. 
+
+## Setup
+
+Below we set options for this Rmarkdown report and load the necessary libraries.
+
+```{r simulation_intro_setup_options}
+knitr::opts_chunk$set(dev = "png",
+                      dpi = 300,
+                      dev.args = list(type = "cairo-png"),
+                      root.dir = '.',
+                      autodep = TRUE)
+
+options(knitr.kable.NA = "-")
+
+bs <- 8
+```
+
+```{r simulation_intro_setup_lib,message=FALSE,warning=FALSE}
+library(data.table)
+library(magrittr)
+library(ggplot2)
+library(patchwork)
+library(plyr)
+library(edgeR)
+library(png)
+library(kableExtra)
+devtools::load_all('../code/pkg')
+```
+
+Next we set the paths to our simulation results.
+
+```{r simulation_intro_setup_paths}
+path.misc <- file.path('../misc/simulation-large-supp.Rmd')
+dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
+
+path.example <- "../output/simulation-large/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/100libsPerGroup/simulation-1"
+
+path.fdr <-
+  list.files('../output/simulation-large/summary','fdr.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.metrics <-
+  list.files('../output/simulation-large/summary','metrics.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.metrics.1pct <-
+  list.files('../output/simulation-large/summary','metrics.1pct.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.time <-
+  list.files('../output/simulation-large/summary','^time.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.quanttime <-
+  list.files('../output/simulation-large/summary','quanttime.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.quantile <-
+  list.files('../output/simulation-large/summary','quantile.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.pvalue <-
+  list.files('../output/simulation-large/summary','pvalue.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.overdispersion <-
+  list.files('../output/simulation-large/summary','overdispersion.tsv.gz',recursive = TRUE,full.names = TRUE)
+path.roc <-
+  list.files('../output/simulation-large/summary','roc.tsv.gz',recursive = TRUE,full.names = TRUE)
+```
+
+## Data loading
+
+Below we load the actual results and relabel some of the factor variables.
+
+```{r simulation_intro_data_targets_paired}
+relabel <- function(x){
+  y <- copy(x)
+  y$TxPerGene %<>% factor(levels = paste0(c(2, 3, 4, 5, 9999), 'TxPerGene'),labels = c(paste0("#Tx/Gene = ", c(2, 3, 4, 5)), 'All Transcripts')) %<>% droplevels()
+  y$LibsPerGroup %<>% factor(levels = paste0(c(3, 5, 10,100), 'libsPerGroup'),labels = paste0('#Lib/Group = ', c(3, 5, 10,100))) %<>% droplevels()
+  y$Quantifier %<>% factor(levels = c('salmon','salmon-gibbs','kallisto'),labels = c('Salmon-Boot','Salmon-Gibbs','kallisto')) %<>% droplevels()
+  y$Length %<>% factor(levels = paste0('readlen-', seq(50, 150, 25)),labels = paste0(seq(50, 150, 25), 'bp')) %<>% droplevels()
+  if (!is.null(x$Sample)) {
+    y$Sample %<>% factor(levels = c(paste0("groupA_rep",1:100,"_R1"),paste0("groupB_rep",1:100,"_R1")),labels = c(paste0("A",1:100),paste0("B",1:100))) %<>% droplevels()
+  }
+  return(y)
+}
+
+# Loading datasets
+dt.fdr <- do.call(rbind,lapply(path.fdr,fread)) %>% relabel()
+dt.metrics <- do.call(rbind,lapply(path.metrics,fread)) %>% relabel()
+dt.metrics.1pct <- do.call(rbind,lapply(path.metrics.1pct,fread)) %>% relabel()
+dt.time <- do.call(rbind,lapply(path.time,fread)) %>% relabel()
+dt.quanttime <- do.call(rbind,lapply(path.quanttime,fread)) %>% relabel()
+dt.quantile <- do.call(rbind,lapply(path.quantile,fread)) %>% relabel()
+dt.pvalue <- do.call(rbind,lapply(path.pvalue,fread)) %>% relabel()
+dt.overdispersion <- do.call(rbind,lapply(path.overdispersion,fread)) %>% relabel()
+dt.roc <- do.call(rbind,lapply(path.roc,fread)) %>% relabel()
+```
+
+# BCV plots
+
+First we compute the BCV plots from Supplementary Figure S11. These BCV plots are from a single simulated experiment and are shown as an example of the count scaling effect on the estimated BCV coefficients.
+
+```{r simulation_bcv,fig.width=7,fig.height=2.75,message=FALSE}
+quant.gibbs <- list.dirs(file.path(path.example,'quant-salmon-gibbs'),recursive = FALSE,full.names = TRUE)
+
+cs.gibbs <- catchSalmon(quant.gibbs,verbose = FALSE)
+group <- strsplit2(basename(colnames(cs.gibbs$counts)),"_")[,1]
+design <- model.matrix(~group)
+
+dge.gibbs.raw <- DGEList(counts = cs.gibbs$counts,
+                         group = group,
+                         annotation = cs.gibbs$annotation)
+
+dge.gibbs.raw <- dge.gibbs.raw[filterByExpr(dge.gibbs.raw,design),,keep.lib.sizes = FALSE]
+dge.gibbs.raw <- normLibSizes(dge.gibbs.raw)
+dge.gibbs.raw <- estimateDisp(dge.gibbs.raw,design = design)
+
+dge.gibbs.scaled <- DGEList(counts = cs.gibbs$counts/cs.gibbs$annotation$Overdispersion,
+                            group = group,
+                            annotation = cs.gibbs$annotation)
+
+dge.gibbs.scaled <- dge.gibbs.scaled[filterByExpr(dge.gibbs.scaled,design),,keep.lib.sizes = FALSE]
+dge.gibbs.scaled <- normLibSizes(dge.gibbs.scaled)
+dge.gibbs.scaled <- estimateDisp(dge.gibbs.scaled,design = design)
+
+plotBCV2 <- function(y, xlab="Average log CPM", ylab="Biological coefficient of variation", pch=16, cex=0.2, col.common="red", col.trend="blue", col.tagwise="black",fontsize = 8,...)
+{
+  if(!is(y,"DGEList")) stop("y must be a DGEList.")
+  
+  A <- y$AveLogCPM
+  if(is.null(A)) A <- aveLogCPM(y$counts, offset=getOffset(y))
+  
+  disp <- getDispersion(y)
+  if(is.null(disp)) stop("No dispersions to plot")
+  if(attr(disp,"type")=="common") disp <- rep_len(disp, length(A))
+  
+  plot(A, sqrt(disp), xlab=xlab, ylab=ylab, type="n", cex.lab = fontsize/12,
+       cex.axis = fontsize/12,...)
+  labels <- cols <- lty <- pt <- NULL
+  if(!is.null(y$tagwise.dispersion)) {
+    points(A, sqrt(y$tagwise.dispersion), pch=pch, cex=cex, col=col.tagwise)
+    labels <- c(labels, "Tagwise")
+    cols <- c(cols, col.tagwise)
+    lty <- c(lty, -1)
+    pt <- c(pt, pch)
+  }
+  if(!is.null(y$common.dispersion)) {
+    abline(h=sqrt(y$common.dispersion), col=col.common, lwd=2)
+    labels <- c(labels, "Common")
+    cols <- c(cols, col.common)
+    lty <- c(lty, 1)
+    pt <- c(pt, -1)		
+  }
+  if(!is.null(y$trended.dispersion)) {
+    o <- order(A)
+    lines(A[o], sqrt(y$trended.dispersion)[o], col=col.trend, lwd=2)
+    labels <- c(labels, "Trend")
+    cols <- c(cols, col.trend)
+    lty <- c(lty, 1)
+    pt <- c(pt, -1)		
+  }
+  legend("topright", legend=labels, lty=lty, pch=pt, pt.cex=cex, lwd=2, col=cols,cex = fontsize/12)
+  
+  invisible()
+}
+
+fig.bcv.raw <- wrap_elements(full = ~ plotBCV2(dge.gibbs.raw))
+fig.bcv.scaled <- wrap_elements(full = ~ plotBCV2(dge.gibbs.scaled))
+
+file.raw <- tempfile("raw",fileext = '.png')
+png(file.raw,width = 3.5,height = 2.75,units = 'in',res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.bcv.raw
+dev.off()
+
+fig.bcv.raw <- readPNG(file.raw, native = TRUE)
+
+file.scaled <- tempfile("scaled",fileext = '.png')
+png(file.scaled,width = 3.5,height = 2.75,units = 'in',res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.bcv.scaled
+dev.off()
+
+fig.bcv.scaled <- readPNG(file.scaled, native = TRUE)
+
+wrap_plots(A = wrap_elements(fig.bcv.raw),
+           B = wrap_elements(fig.bcv.scaled),
+           design = c(area(1,1),area(1,2))) +
+  plot_annotation(tag_levels = 'a',theme = theme(plot.tag = element_text(size = bs)))
+```
+
+# Power
+
+Below I compute the barplots of Supplementary Figure S11. Panel (c) reports the observed power and FDR under a nominal FDR threshold of 0.05.
+
+```{r simulation_power,fig.width = 8,fig.height = 1.625}
+dt.power <- dt.metrics[FC == 'fc2' &
+                         Quantifier != 'kallisto' &
+                         !grepl("\\.n|RC",Method) &
+                         Scenario == 'unbalanced',]
+
+dt.power$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ', c(3, 5,10,100)),labels = paste0(c(3,5,10,100),' samples per group'))
+dt.power$Scenario %<>% factor(levels = c('balanced','unbalanced'),labels = c('Equal library sizes','Unequal library sizes'))
+dt.power$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),labels = c('Bootstrap','Gibbs'))
+dt.power$Method %<>% mapvalues(from = c('edgeR-SC','edgeR.legacy-SC'),to = c('edgeR-v4','edgeR-v3'))
+
+dt.power[, FDR := roundPretty(ifelse((FP+TP) == 0,NA,100*FP/(FP+TP)),1)]
+
+x.melt <- melt(dt.power,id.vars = colnames(dt.power)[-which(colnames(dt.power) %in% c('P.SIG','TP','FP'))],
+               measure.vars = c('TP','FP'),
+               variable.name = 'Type',
+               value.name = 'Value')
+x.melt$Type <-
+  factor(x.melt$Type,
+         levels = c('FP','TP'),
+         labels = c('False','True'))
+
+plot.power <- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size = bs){
+  tb.bar <- df.bar[Scenario == scenario & LibsPerGroup == library,]
+  tb.txt <- df.txt[Scenario == scenario & LibsPerGroup == library,][FDR != 'NA',]
+  gap <- 0.05*max(dt.power$TP + dt.power$FP)
+  ggplot(tb.bar,aes(x = Quantifier,y = Value,fill = Type)) +
+    facet_wrap(facets = "Method",nrow = 1) +
+    geom_col() +
+    geom_text(aes(x = Quantifier,y = (TP + FP) +  gap,label = FDR),
+              vjust = 0,data = tb.txt,size = base_size/.pt,inherit.aes = FALSE) +
+    scale_fill_manual(values = c('#ff0000','#bebebe')) +
+    labs(x = NULL,y = paste('DE Transcripts')) +
+    scale_y_continuous(limits = c(0,6000)) +
+    theme_bw(base_size = base_size,base_family = 'sans') +
+    theme(panel.grid = element_blank(),
+          # axis.text.x = element_text(angle = 90),
+          axis.text = element_text(colour = 'black',size = base_size),
+          strip.text = element_text(size = base_size)) +
+    if (legend == TRUE) theme(legend.background = element_rect(fill = alpha('white', 0)),
+                              legend.text = element_text(size = base_size),
+                              legend.position.inside = c(0.9,0.825),
+                              legend.position = 'inside',
+                              legend.direction = 'horizontal',
+                              legend.title = element_blank(),
+                              legend.key.size = unit(0.75,"line")) else theme(legend.position = 'none')
+}
+
+fig.power <- plot.power(df.bar = x.melt,
+                        df.txt = dt.power,
+                        scenario = 'Unequal library sizes',
+                        library = '100 samples per group',
+                        legend = TRUE)
+
+fig.power
+```
+
+Analogously, we create panel (d), which reports the observed power and FDR under a nominal FDR threshold of 0.01.
+
+```{r simulation_power_1pct,fig.width = 8,fig.height = 1.625}
+dt.power.1pct <- dt.metrics.1pct[FC == 'fc2' &
+                                   Quantifier != 'kallisto' &
+                                   !grepl("\\.n|RC",Method) &
+                                   Scenario == 'unbalanced',]
+
+dt.power.1pct$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ', c(3, 5,10,100)),labels = paste0(c(3,5,10,100),' samples per group'))
+dt.power.1pct$Scenario %<>% factor(levels = c('balanced','unbalanced'),labels = c('Equal library sizes','Unequal library sizes'))
+dt.power.1pct$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),labels = c('Bootstrap','Gibbs'))
+dt.power.1pct$Method %<>% mapvalues(from = c('edgeR-SC','edgeR.legacy-SC'),to = c('edgeR-v4','edgeR-v3'))
+
+dt.power.1pct[, FDR := roundPretty(ifelse((FP+TP) == 0,NA,100*FP/(FP+TP)),1)]
+
+x.melt.1pct <- melt(dt.power.1pct,id.vars = colnames(dt.power.1pct)[-which(colnames(dt.power.1pct) %in% c('P.SIG','TP','FP'))],
+                    measure.vars = c('TP','FP'),
+                    variable.name = 'Type',
+                    value.name = 'Value')
+x.melt.1pct$Type <-
+  factor(x.melt.1pct$Type,
+         levels = c('FP','TP'),
+         labels = c('False','True'))
+
+plot.power <- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size = bs){
+  tb.bar <- df.bar[Scenario == scenario & LibsPerGroup == library,]
+  tb.txt <- df.txt[Scenario == scenario & LibsPerGroup == library,][FDR != 'NA',]
+  gap <- 0.05*max(dt.power.1pct$TP + dt.power.1pct$FP)
+  ggplot(tb.bar,aes(x = Quantifier,y = Value,fill = Type)) +
+    facet_wrap(facets = "Method",nrow = 1) +
+    geom_col() +
+    geom_text(aes(x = Quantifier,y = (TP + FP) +  gap,label = FDR),
+              vjust = 0,data = tb.txt,size = base_size/.pt,inherit.aes = FALSE) +
+    scale_fill_manual(values = c('#ff0000','#bebebe')) +
+    labs(x = NULL,y = paste('DE Transcripts')) +
+    scale_y_continuous(limits = c(0,6000)) +
+    theme_bw(base_size = base_size,base_family = 'sans') +
+    theme(panel.grid = element_blank(),
+          # axis.text.x = element_text(angle = 90),
+          axis.text = element_text(colour = 'black',size = base_size),
+          strip.text = element_text(size = base_size)) +
+    if (legend == TRUE) theme(legend.background = element_rect(fill = alpha('white', 0)),
+                              legend.text = element_text(size = base_size),
+                              legend.position.inside = c(0.9,0.825),
+                              legend.position = 'inside',
+                              legend.direction = 'horizontal',
+                              legend.title = element_blank(),
+                              legend.key.size = unit(0.75,"line")) else theme(legend.position = 'none')
+}
+
+fig.power.1pct <- plot.power(df.bar = x.melt.1pct,
+                             df.txt = dt.power.1pct,
+                             scenario = 'Unequal library sizes',
+                             library = '100 samples per group',
+                             legend = TRUE)
+
+fig.power.1pct
+```
+
+# ROC curves
+
+Below I generate the plots showing observed power and FDR under different nominal FDR threshold values and number of resamples. This is panel (e) from Supplementary Figure S11.
+
+```{r simulation_roc,fig.width = 6,fig.height = 3}
+dt.rcurve <- dt.roc[FC == 'fc2' &
+                      grepl("edgeR-SC|edgeR-SC\\.n",Method) &
+                      Scenario == 'unbalanced' &
+                      Quantifier != 'kallisto',]
+
+dt.rcurve$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ', c(3, 5, 10,100)),labels = paste0(c('Three','Five', 'Ten','Hundred'),' samples per group'))
+dt.rcurve$Scenario %<>% factor(levels = c('balanced','unbalanced'),labels = c('Equal library sizes','Unequal library sizes'))
+dt.rcurve$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),labels = c('Bootstrap','Gibbs'))
+dt.rcurve$Method %<>%
+  factor(levels = c(paste0('edgeR-SC.n',c(2,3)),'edgeR-SC')) %<>%
+  mapvalues(from = c(paste0('edgeR-SC.n',c(2,3)),'edgeR-SC'),to = paste0(c(2,3,20)))
+
+
+dt.rcurve.long <- melt(dt.rcurve,
+                       id.vars = c('Genome','Length','FC','Reads','TxPerGene','Scenario','LibsPerGroup','Quantifier','Method','nFDR'),
+                       measure.vars = c('oTPR','oFDR'),
+                       variable.name = 'Type',
+                       value.name = 'Value')
+
+foo <- function(x,lib,type,ylab,title = NULL,base_size = bs,legend = TRUE,...){
+  sub.x <- x[LibsPerGroup == lib & Type == type,]
+  
+  sub.x$nFDR_char <- roundPretty(sub.x$nFDR,digits = 2)
+  sub.x$nFDR_char %<>% factor(levels = c('0.01','0.05','0.10','0.15','0.20'))
+  
+  shape <- 21:25
+  names(shape) <- c('0.01','0.05','0.10','0.15','0.20')
+  
+  p <- ggplot(data = sub.x, aes(x = Method,y = Value,group = interaction(nFDR_char,Quantifier))) +
+    geom_line(aes(color = Quantifier),linewidth = 0.25) +
+    geom_point(aes(shape = nFDR_char,color = Quantifier,fill = Quantifier),size = 1.25) +
+    theme_bw(base_size = bs,base_family = 'sans') +
+    scale_color_manual(values = c('Bootstrap' = 'red','Gibbs' = 'blue')) +
+    scale_fill_manual(values = c('Bootstrap' = 'red','Gibbs' = 'blue'),guide = "none") +
+    scale_shape_manual(values = shape) +
+    coord_cartesian(...) +
+    theme(panel.grid = element_blank(),
+          plot.title = element_text(hjust = 0.5,size = base_size),
+          axis.text = element_text(colour = 'black',size = base_size),
+          strip.text = element_text(colour = 'black',size = base_size)) +
+    labs(x = 'Number of Resamples',y = ylab,shape = 'Nominal FDR',color = 'Method',title = title) +
+    if (legend == TRUE) {theme(legend.background = element_rect(fill = alpha('white', 0)),
+                               legend.text = element_text(size = base_size),
+                               legend.title = element_text(size = base_size),
+                               legend.margin = margin(0, 0, 0, 0))} else theme(legend.position = 'none')
+  p
+}
+
+fig.roc.hundred.tpr <- foo(dt.rcurve.long,lib = 'Hundred samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.9,1))
+fig.roc.hundred.fdr <- foo(dt.rcurve.long,lib = 'Hundred samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2))
+
+fig.roc <- wrap_plots(A = fig.roc.hundred.tpr,
+                      B = fig.roc.hundred.fdr,
+                      design = c(area(1,1),area(1,2))) +
+  plot_layout(guides = 'collect') & theme(
+    legend.position = 'bottom',
+    legend.direction = 'horizontal')
+
+fig.roc
+```
+
+# Time comparison
+
+Finally, the code chunk below generates Supplementary Figure S12.
+
+```{r simulation_dtetime,fig.height=3,fig.width=6}
+dt.dte <- merge(x = dt.time[grepl("edgeR-SC$|edgeR.legacy-SC$|sleuth|Swish",Method) &
+                              grepl("Salmon",Quantifier) &
+                              Scenario == 'unbalanced' &
+                              FC == 'fc2',c('LibsPerGroup','Method','Quantifier','Time')],
+                y = dt.roc[grepl("edgeR-SC$|edgeR.legacy-SC$|sleuth|Swish",Method) &
+                             grepl("Salmon",Quantifier) &
+                             Scenario == 'unbalanced' &
+                             FC == 'fc2' &
+                             nFDR == 0.05,c('LibsPerGroup','Method','Quantifier','oTPR','oFDR')],
+                by = c('LibsPerGroup','Method','Quantifier'),
+                all.x = TRUE)
+
+dt.dte[,Time := 60*Time]
+
+dt.dte$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ',c(3,5,10,100)),
+                                labels = c('Three','Five','Ten','Hundred'))
+
+dt.dte$Method %<>% factor(levels = c('edgeR.legacy-SC','edgeR-SC','sleuth-LRT','sleuth-Wald','Swish'),
+                          labels = c('edgeR-v3','edgeR-v4','sleuth-LRT','sleuth-Wald','Swish'))
+
+dt.dte$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),
+                              labels = c('Bootstrap','Gibbs'))
+
+
+fig.time <- ggplot(data = dt.dte,aes(x = Method,y = Time)) +
+  facet_wrap(facets = 'Quantifier',nrow = 1) +
+  geom_col() +
+  coord_cartesian(ylim = c(0,270)) +
+  scale_y_continuous(breaks = seq(0,300,60)) +
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 90),
+        axis.text = element_text(colour = 'black',size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = NULL,y = "Time (sec)")
+
+fig.time
+```
+
+# Output files
+
+In the code chunk below I save the figures in PNG format for the supplement.
+
+```{r simulation_output,fig.width=7,fig.height=9}
+dsg.area <- c(area(1,1),area(1,2),
+              area(2,1,2,2),
+              area(3,1,3,2),
+              area(4,1,4,2))
+
+fig.metrics <- wrap_plots(A = wrap_elements(fig.bcv.raw),
+                          B = wrap_elements(fig.bcv.scaled),
+                          C = wrap_elements(fig.power),
+                          D = wrap_elements(fig.power.1pct),
+                          E = wrap_elements(fig.roc),
+                          design = dsg.area,
+                          heights = c(2.75,1.625,1.625,3)/9) +
+  plot_annotation(tag_levels = 'a',
+                  theme = theme(plot.tag = element_text(size = bs)))
+
+fig.metrics
+
+ggsave(plot = fig.metrics,filename = file.path(path.misc,'SuppFigure-LargeN.png'),
+       device = 'png',width = 7,height = 9,units = 'in',dpi = 300)
+
+
+ggsave(plot = fig.time,filename = file.path(path.misc,'SuppFigure-LargeN-Time.png'),
+       device = 'png',width = 6,height = 3,units = 'in',dpi = 300)
+```

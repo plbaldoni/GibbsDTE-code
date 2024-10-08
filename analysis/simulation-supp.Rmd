@@ -1,5 +1,5 @@
 ---
-title: "Simulation study (supplementary results)"
+title: "Simulation results from the supplement I (small-scale simulation)"
 author: "Pedro L. Baldoni"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: workflowr::wflow_html
@@ -9,7 +9,11 @@ editor_options:
 
 # Introduction
 
+This Rmarkdown generates Supplementary Figures S4--S9 and Supplementary Table S1 from our Gibbs DTE paper. The results are based on the simulation designed to emulate small-scale experiments with low biological variation and sample size, a typical scenario of RNA-seq studies with genetically modified organisms or cell lines. 
+
 ## Setup
+
+Below we set options for this Rmarkdown report and load the necessary libraries.
 
 ```{r simulation_intro_setup_options}
 knitr::opts_chunk$set(dev = "png",
@@ -19,6 +23,9 @@ knitr::opts_chunk$set(dev = "png",
                       autodep = TRUE)
 
 options(knitr.kable.NA = "-")
+
+bs <- 8
+
 ```
 
 ```{r simulation_intro_setup_lib,message=FALSE,warning=FALSE}
@@ -30,6 +37,8 @@ library(plyr)
 library(kableExtra)
 devtools::load_all('../code/pkg')
 ```
+
+Next we set the paths to our simulation results.
 
 ```{r simulation_intro_setup_paths}
 path.misc <- file.path('../misc/simulation-supp.Rmd')
@@ -55,11 +64,9 @@ path.roc <-
   list.files('../output/simulation/summary','roc.tsv.gz',recursive = TRUE,full.names = TRUE)
 ```
 
-```{r simulation_parameters}
-bs <- 8
-```
-
 ## Data loading
+
+Below we load the actual results and relabel some of the factor variables.
 
 ```{r simulation_intro_data_targets_paired}
 relabel <- function(x){
@@ -86,6 +93,8 @@ dt.roc <- do.call(rbind,lapply(path.roc,fread)) %>% relabel()
 ```
 
 # Power
+
+Below I compute the barplots of Supplementary Figures S4--S8.
 
 ```{r simulation_power,fig.width = 6,fig.height = 2}
 dt.power <- dt.metrics[FC == 'fc2' &
@@ -121,7 +130,8 @@ plot.power <- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size 
           strip.text = element_text(size = base_size)) +
     if (legend == TRUE) theme(legend.background = element_rect(fill = alpha('white', 0)),
                               legend.text = element_text(size = base_size),
-                              legend.position = c(0.95,0.825),
+                              legend.position = 'inside',
+                              legend.position.inside = c(0.95,0.825),
                               legend.title = element_blank(),
                               legend.key.size = unit(0.75,"line")) else theme(legend.position = 'none')
 }
@@ -192,6 +202,8 @@ fig.power.kallisto.10
 ```
 
 # FDR
+
+Below I compute the false discovery curves of Supplementary Figures S4--S8.
 
 ```{r simulation_fdr,fig.width = 6,fig.height = 6}
 dt.fdr.plot <- dt.fdr[FC == 'fc2' &
@@ -285,6 +297,8 @@ fig.fdr.kallisto.10
 
 # ROC curves
 
+Below is the code chunk used to generate Supplementary Figure S9.
+
 ```{r simulation_roc,fig.width = 6,fig.height = 5}
 dt.rcurve <- dt.roc[FC == 'fc2' &
                       grepl("edgeR-SC|edgeR-SC\\.n",Method) &
@@ -317,6 +331,8 @@ fig.roc
 ```
 
 # Quantification time
+
+Below I generate Supplementary Table S1.
 
 ```{r simulation_quanttime}
 dt.salmontime <- dt.quanttime[,
@@ -363,6 +379,8 @@ kbl(x = dt.salmontime,
 ```
 
 # Output files
+
+And finally all files are exported to be incorporated in the supplement.
 
 ```{r simulation_output}
 fig.metrics.salmon.3 <- wrap_plots(A = fig.power.salmon.3,

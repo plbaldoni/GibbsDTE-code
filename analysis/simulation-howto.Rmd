@@ -9,6 +9,8 @@ editor_options:
 
 The R code used in our simulation study to generate the simulated data, quantify the FASTQ files, run DTE methods, and summarize the results was organized as an R package and it is located in the GitHub repository of this page in the directory `./code/pkg`.
 
+In our paper we have run two simulation studies: one designed to emulate small-scale experiments from model organisms, such as genetically identical mice or cell lines with relatively low levels of biological variation, and another designed to emulate large-scale observational experiments from human subjects with high levels of biological variation. In our repository, scripts to reproduce these two simulation studies are located in the directories `./code/simulation` and `./code/simulation-large`, respectively. Instructions on how to run these simulation studies are identical. Below I describe how to run the small-scale simulation. Analogous steps can be followed to reproduce the large-scale simulation. See `readme.txt` in `./code/simulation` and `./code/simulation-large` for further details.
+
 To run our simulations, readers should refer to the files stored in the directory `./code/simulation`. The text file `./code/simulation/readme.txt` presents the necessary steps to run the simulations and summarize the results. Briefly, readers should run the following steps:
 
 1. Run the file `parameters.R` with, for example, the command `Rscript parameters.R`.

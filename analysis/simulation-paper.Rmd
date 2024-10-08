@@ -1,5 +1,5 @@
 ---
-title: "Simulation study"
+title: "Simulation results from the main article"
 author: "Pedro L. Baldoni"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: workflowr::wflow_html
@@ -9,7 +9,11 @@ editor_options:
 
 # Introduction
 
+This Rmarkdown generates Figures 3 and 4 as well as Tables 1 and 2 from our Gibbs DTE paper. The results are based on the simulation designed to emulate small-scale experiments with low biological variation and sample size, a typical scenario of RNA-seq studies with genetically modified organisms or cell lines. 
+
 ## Setup
+
+Below we set options for this Rmarkdown report and load the necessary libraries.
 
 ```{r simulation_intro_setup_options}
 knitr::opts_chunk$set(dev = "png",
@@ -19,6 +23,8 @@ knitr::opts_chunk$set(dev = "png",
                       autodep = TRUE)
 
 options(knitr.kable.NA = "-")
+
+bs <- 8
 ```
 
 ```{r simulation_intro_setup_lib,message=FALSE,warning=FALSE}
@@ -30,6 +36,8 @@ library(plyr)
 library(kableExtra)
 devtools::load_all('../code/pkg')
 ```
+
+Next we set the paths to our simulation results.
 
 ```{r simulation_intro_setup_paths}
 path.misc <- file.path('../misc/simulation.Rmd')
@@ -55,11 +63,9 @@ path.roc <-
   list.files('../output/simulation/summary','roc.tsv.gz',recursive = TRUE,full.names = TRUE)
 ```
 
-```{r simulation_parameters}
-bs <- 8
-```
-
 ## Data loading
+
+Below we load the actual results and relabel some of the factor variables.
 
 ```{r simulation_intro_data_targets_paired}
 relabel <- function(x){
@@ -86,6 +92,8 @@ dt.roc <- do.call(rbind,lapply(path.roc,fread)) %>% relabel()
 ```
 
 # Power
+
+Below I compute the barplot of Figure 3.
 
 ```{r simulation_power,fig.width = 6,fig.height = 1.5}
 dt.power <- dt.metrics[FC == 'fc2' &
@@ -128,7 +136,8 @@ plot.power <- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size 
           strip.text = element_text(size = base_size)) +
     if (legend == TRUE) theme(legend.background = element_rect(fill = alpha('white', 0)),
                               legend.text = element_text(size = base_size),
-                              legend.position = c(0.95,0.825),
+                              legend.position = 'inside',
+                              legend.position.inside = c(0.95,0.825),
                               legend.direction = 'vertical',
                               legend.title = element_blank(),
                               legend.key.size = unit(0.75,"line")) else theme(legend.position = 'none')
@@ -144,6 +153,8 @@ fig.power
 ```
 
 # FDR
+
+Below I compute the false discovery curves of Figure 3.
 
 ```{r simulation_fdr,fig.width = 3.5,fig.height =  3.5}
 dt.fdr.plot <- dt.fdr[FC == 'fc2' &
@@ -202,41 +213,9 @@ fig.fdr <- plot.fdr(df.line = dt.fdr.plot[N <= 2500,],
 fig.fdr
 ```
 
-# ROC curves
-
-```{r simulation_roc,fig.width = 6,fig.height = 5}
-dt.rcurve <- dt.roc[FC == 'fc2' &
-                      grepl("edgeR-SC|edgeR-SC\\.n",Method) &
-                      Scenario == 'unbalanced' &
-                      Quantifier != 'kallisto',]
-
-dt.rcurve$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ', c(3, 5, 10)),labels = paste0(c('Three','Five', 'Ten'),' samples per group'))
-dt.rcurve$Scenario %<>% factor(levels = c('balanced','unbalanced'),labels = c('Equal library sizes','Unequal library sizes'))
-dt.rcurve$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),labels = c('Bootstrap','Gibbs'))
-dt.rcurve$Method %<>%
-  factor(levels = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC')) %<>%
-  mapvalues(from = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC'),to = paste0(seq(10,100,10)))
-
-fig.roc <- ggplot(data = dt.rcurve,aes(x = oFDR,y = oTPR,group = Method,color = Method)) +
-  facet_grid(rows = vars(LibsPerGroup),cols = vars(Quantifier)) +
-  geom_vline(xintercept = c(0.01,0.05,0.1,0.15,0.2),linetype = 'dashed',linewidth = 0.25,color = 'gray') +
-  geom_hline(yintercept = c(0,0.25,0.5,0.75,1),linetype = 'dashed',linewidth = 0.25,color = 'gray') +
-  geom_line(linewidth = 0.5) +
-  geom_point(aes(shape = as.factor(nFDR)),size = 3) +
-  scale_y_continuous(limits = c(0,1)) +
-  scale_x_continuous(limits = c(0,0.2)) +
-  scale_color_viridis_d(direction = -1) +
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        legend.text = element_text(colour = 'black',size = bs),
-        axis.text = element_text(colour = 'black',size = bs),
-        strip.text = element_text(colour = 'black',size = bs)) +
-  labs(x = 'Observed FDR',y = 'Observed power',shape = 'Nominal FDR',color = 'Resamples')
-
-fig.roc
-```
-
 # Error rate
+
+Finally, the code chunk below generates the bar plot showing the observed type 1 error rate calculated from our null simulations.
 
 ```{r simulation_error,fig.width = 3,fig.height = 3}
 dt.type1error <- dt.metrics[FC == 'fc1' &
@@ -274,7 +253,82 @@ fig.type1error <- plot.type1error(df.bar = x.melt,
 fig.type1error
 ```
 
+# ROC curves
+
+Below is the code chunk to generate Figure 4.
+
+```{r simulation_roc,fig.width = 7,fig.height = 5}
+dt.rcurve <- dt.roc[FC == 'fc2' &
+                      grepl("edgeR-SC|edgeR-SC\\.n",Method) &
+                      Scenario == 'unbalanced' &
+                      Quantifier != 'kallisto',]
+
+dt.rcurve$LibsPerGroup %<>% factor(levels = paste0('#Lib/Group = ', c(3, 5, 10)),labels = paste0(c('Three','Five', 'Ten'),' samples per group'))
+dt.rcurve$Scenario %<>% factor(levels = c('balanced','unbalanced'),labels = c('Equal library sizes','Unequal library sizes'))
+dt.rcurve$Quantifier %<>% factor(levels = c('Salmon-Boot','Salmon-Gibbs'),labels = c('Bootstrap','Gibbs'))
+dt.rcurve$Method %<>%
+  factor(levels = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC')) %<>%
+  mapvalues(from = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC'),to = paste0(seq(10,100,10)))
+
+dt.rcurve.long <- melt(dt.rcurve,
+                       id.vars = c('Genome','Length','FC','Reads','TxPerGene','Scenario','LibsPerGroup','Quantifier','Method','nFDR'),
+                       measure.vars = c('oTPR','oFDR'),
+                       variable.name = 'Type',
+                       value.name = 'Value')
+
+foo <- function(x,lib,type,ylab,title = NULL,base_size = bs,legend = TRUE,...){
+  sub.x <- x[LibsPerGroup == lib & Type == type,]
+  
+  sub.x$nFDR_char <- roundPretty(sub.x$nFDR,digits = 2)
+  sub.x$nFDR_char %<>% factor(levels = c('0.01','0.05','0.10','0.15','0.20'))
+  
+  shape <- 21:25
+  names(shape) <- c('0.01','0.05','0.10','0.15','0.20')
+  
+  p <- ggplot(data = sub.x, aes(x = Method,y = Value,group = interaction(nFDR_char,Quantifier))) +
+    geom_line(aes(color = Quantifier),linewidth = 0.25) +
+    geom_point(aes(shape = nFDR_char,color = Quantifier,fill = Quantifier),size = 1.25) +
+    theme_bw(base_size = bs,base_family = 'sans') +
+    scale_color_manual(values = c('Bootstrap' = 'red','Gibbs' = 'blue')) +
+    scale_fill_manual(values = c('Bootstrap' = 'red','Gibbs' = 'blue'),guide = "none") +
+    scale_shape_manual(values = shape) +
+    coord_cartesian(...) +
+    theme(panel.grid = element_blank(),
+          plot.title = element_text(hjust = 0.5,size = base_size),
+          axis.text = element_text(colour = 'black',size = base_size),
+          strip.text = element_text(colour = 'black',size = base_size)) +
+    labs(x = 'Number of Resamples',y = ylab,shape = 'Nominal FDR',color = 'Method',title = title) +
+    if (legend == TRUE) {theme(legend.background = element_rect(fill = alpha('white', 0)),
+                               legend.text = element_text(size = base_size),
+                               legend.title = element_text(size = base_size),
+                               legend.margin = margin(0, 0, 0, 0))} else theme(legend.position = 'none')
+  p
+}
+
+fig.roc.three.tpr <- foo(dt.rcurve.long,lib = 'Three samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.1,0.7)) + labs(x = NULL,title = "n = 3")
+fig.roc.five.tpr <- foo(dt.rcurve.long,lib = 'Five samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.55,0.9)) + labs(x = NULL,y = NULL,title = "n = 5")
+fig.roc.ten.tpr <- foo(dt.rcurve.long,lib = 'Ten samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.875,0.975)) + labs(x = NULL,y = NULL,title = "n = 10") + scale_y_continuous(breaks = c(0.88,0.92,0.96))
+
+fig.roc.three.fdr <- foo(dt.rcurve.long,lib = 'Three samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2))
+fig.roc.five.fdr <- foo(dt.rcurve.long,lib = 'Five samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2)) + labs(y = NULL)
+fig.roc.ten.fdr <- foo(dt.rcurve.long,lib = 'Ten samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2)) + labs(y = NULL)
+
+wrap_plots(A = fig.roc.three.tpr,
+           B = fig.roc.five.tpr,
+           C = fig.roc.ten.tpr,
+           D = fig.roc.three.fdr,
+           E = fig.roc.five.fdr,
+           `F` = fig.roc.ten.fdr,
+           design = c(area(1,1),area(1,2),area(1,3),
+                      area(2,1),area(2,2),area(2,3))) + 
+  plot_layout(guides = 'collect') & theme(
+    legend.position = 'bottom',
+    legend.direction = 'horizontal')
+```
+
 # Quantification time
+
+The code chunk below generates Table 1.
 
 ```{r simulation_quanttime}
 dt.salmontime <- dt.quanttime[Quantifier != 'kallisto',
@@ -321,6 +375,8 @@ kbl(x = dt.salmontime,
 ```
 
 # edgeR comparison
+
+The code chunk below generates Table 2.
 
 ```{r simulation_dtetime}
 dt.dte <- merge(x = dt.time[grepl("edgeR-SC$|edgeR.legacy-SC$",Method) &
@@ -392,6 +448,8 @@ kbl(x = dt.dte,
 
 # Output files
 
+Finally, figures and tables are exported to be included in the main paper.
+
 ```{r simulation_output}
 fig.metrics <- wrap_plots(A = fig.power,
                           B = fig.fdr,
@@ -404,8 +462,20 @@ fig.metrics <- wrap_plots(A = fig.power,
 ggsave(plot = fig.metrics,filename = file.path(path.misc,'Figure-Metrics.pdf'),
        device = 'pdf',width = 6,height = 5,units = 'in',dpi = 300)
 
+fig.roc <- wrap_plots(A = fig.roc.three.tpr,
+                      B = fig.roc.five.tpr,
+                      C = fig.roc.ten.tpr,
+                      D = fig.roc.three.fdr,
+                      E = fig.roc.five.fdr,
+                      `F` = fig.roc.ten.fdr,
+                      design = c(area(1,1),area(1,2),area(1,3),
+                                 area(2,1),area(2,2),area(2,3))) + 
+  plot_layout(guides = 'collect') & theme(
+    legend.position = 'bottom',
+    legend.direction = 'horizontal')
+
 ggsave(plot = fig.roc,filename = file.path(path.misc,'Figure-ROC.pdf'),
-       device = 'pdf',width = 6,height = 5,units = 'in',dpi = 300)
+       device = 'pdf',width = 7,height = 5,units = 'in',dpi = 300)
 
 save_kable(tb.salmontime,file = file.path(path.misc,'Table-QuantTime.tex'))
 save_kable(tb.dte,file = file.path(path.misc,'Table-DTETime.tex'))

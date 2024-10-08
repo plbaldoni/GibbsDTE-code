@@ -9,7 +9,11 @@ editor_options:
 
 # Introduction
 
+This Rmarkdown generates Figures 1, 2, and 5 from our main paper as well as Supplementary Figures S1--S3 and S10 from the supplement. The results are based on the analysis of the human lung cancer cell lines dataset, although Supplementary Figure S3 include data from our small-scale simulated data.
+
 ## Setup
+
+Below we set options for this Rmarkdown report and load the necessary libraries.
 
 ```{r lung_intro_setup_options}
 knitr::opts_chunk$set(dev = "png",
@@ -40,6 +44,8 @@ library(BiocParallel)
 devtools::load_all('../code/pkg')
 ```
 
+Next we set the paths to our pre-processed data as well as to one of our simulated experiment.
+
 ```{r lung_intro_setup_paths}
 path.misc <- file.path('../misc/lung.Rmd')
 dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
@@ -51,6 +57,8 @@ path.sim <-
             'paired-end/9999TxPerGene/unbalanced/5libsPerGroup/simulation-1/')
 ```
 
+Below I specify some parameters that are used in this report. Specifically, I register a back-end to be used for parallel processing.
+
 ```{r lung_parameters}
 bs <- 8
 bseq <- seq(10,100,10)
@@ -58,7 +66,9 @@ BPPARAM <- BiocParallel::MulticoreParam(workers = 10,progressbar = TRUE)
 register(BPPARAM)
 ```
 
-## Data loading
+## Data loading 
+
+Below I load the transcriptome annotation used in this analysis. I use `AnnotationHub` for that purpose.
 
 ```{r lung_anno}
 ah <- AnnotationHub()
@@ -75,12 +85,15 @@ dt.anno.gene <-
 dt.anno.gene[,GeneOfInterest := 
                GENEBIOTYPE %in% c('protein_coding','lncRNA') & !is.na(ENTREZID)]
 ```
+Some transcriptome information is easily obtained from the GTF file of the annotation. Below I import such a file with `rtracklayer`.
 
 ```{r lung_gtf}
 gr <- import("../data/annotation/hg38/gencode.v33.annotation.gtf.gz")
 gr$EntrezID <- dt.anno$ENTREZID[match(gr$transcript_id,dt.anno$TXIDVERSION)]
 gr.tx <- gr[gr$type == 'transcript']
 ```
+
+Then, I load the quantification results obtained with Salmon and Gibbs sampling.
 
 ```{r lung_quant_gibbs}
 cs.gibbs <- 
@@ -102,6 +115,7 @@ cs.gibbs$annotation$GeneID <-
 cs.gibbs$annotation$GeneOfInterest <- 
   dt.anno.gene$GeneOfInterest[match(cs.gibbs$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
 ```
+Similarly, I load the quantification results obtained with Salmon and bootstrap sampling.
 
 ```{r lung_quant_boot}
 cs.boot <- 
@@ -123,6 +137,7 @@ cs.boot$annotation$GeneID <-
 cs.boot$annotation$GeneOfInterest <- 
   dt.anno.gene$GeneOfInterest[match(cs.boot$annotation$GeneID,dt.anno.gene$GENEIDVERSION)]
 ```
+Finally, I load the quantification results obtained with kallisto.
 
 ```{r lung_kallisto_quant_boot}
 cs.kallisto <- 
@@ -147,12 +162,15 @@ cs.kallisto$annotation$GeneOfInterest <-
 cs.kallisto$counts <- cs.kallisto$counts[match(rownames(cs.gibbs$counts),rownames(cs.kallisto$counts)),]
 cs.kallisto$annotation <- cs.kallisto$annotation[match(rownames(cs.gibbs$annotation),rownames(cs.kallisto$annotation)),]
 ```
+Below I load the targets metadata file of the RNA-seq experiment, with contain information about the cell line of origin of each RNA-seq library.
 
 ```{r lung_targets}
 targets <- read.delim('../data/lung/misc/targets.txt')
 targets$GSM <- strsplit2(targets$File1,"_")[,1]
 targets <- targets[match(basename(colnames(cs.gibbs$counts)),targets$GSM),]
 ```
+
+Then I create `DGEList` objects to facilitate downstream analyses.
 
 ```{r lung_dgelist}
 dte.raw <- DGEList(counts = cs.gibbs$counts,
@@ -177,6 +195,8 @@ dte.kallisto <- DGEList(counts = cs.kallisto$counts/cs.kallisto$annotation$Overd
 dte.kallisto$samples$group <- dte.kallisto$samples$Group
 ```
 
+To obtain the quantification time from Salmon, I look into the SLURM log output file.
+
 ```{r lung_salmon_log}
 log.salmon <- readLines('../code/lung/salmon/slurm-15887027.out')
 log.salmon.boot <- log.salmon[grepl("Timestamp Bootstrap",log.salmon)] %>% 
@@ -196,6 +216,7 @@ log.salmon.gibbs$Diff
 mean(log.salmon.boot$Diff)
 mean(log.salmon.gibbs$Diff)
 ```
+I do the same with kallisto.
 
 ```{r lung_kallisto_log}
 log.kallisto <- readLines('../code/lung/kallisto/slurm-16121443.out')
@@ -212,7 +233,11 @@ mean(log.kallisto.boot$Diff)
 
 # Data analysis
 
+Now we begin with the DTE analysis.
+
 ## Filtering
+
+We start by filtering out low expressed transcripts and transcripts belonging to uninteresting genes, i.e. those that are not protein-coding or lncRNA genes.
 
 ```{r lung_filtering}
 keep.raw <- 
@@ -246,6 +271,8 @@ dte.kallisto.filtr <- dte.kallisto[keep.kallisto,,keep.lib.sizes = FALSE]
 
 ## Normalization
 
+We apply TMM normalization to remove RNA composition biases.
+
 ```{r lung_norm}
 dte.raw.filtr <- normLibSizes(dte.raw.filtr)
 dte.raw.filtr$samples$norm.factors
@@ -261,6 +288,10 @@ dte.kallisto.filtr$samples$norm.factors
 ```
 
 ## Comparison of Bootstrap- and Gibbs-based RTA
+
+In the set of code chunks below I compare bootstrap- and Gibbs-based RTA estimates. These plots are used to generate Figure 1 of the main paper as well as Supplementary Figure 1.
+
+I start by organizing the data into a single data.table object.
 
 ```{r lung_boot_vs_gibbs}
 isExpr <- rowSums(dte.gibbs$counts) > 0
@@ -293,63 +324,24 @@ dt.scatter[,fc.expr.kallisto.fit := .(loessFit(x = Expr.Salmon.Gibbs,
                                                y = log2(Kallisto.Bootstrap/Salmon.Gibbs))$fitted)]
 ```
 
+Below I generate panel (a) of Figure 1.
+
 ```{r lung_boot_vs_gibbs_salmon,fig.width = 3,fig.height = 3}
 fig.scatter.salmon <- ggplot(data = dt.scatter,aes(x = log2(Salmon.Bootstrap))) +
-  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
-  geom_line(aes(y = gibbs.salmon.boot.fit),linewidth = 0.5,color = '#3366FF') +
-  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed',linewidth = 0.75) +
+  geom_point(alpha = 1,shape = 16,size = 0.3,aes(y = log2(Salmon.Gibbs))) +
+  geom_abline(intercept = 0,slope = 1,color = 'gray',linetype = 'dashed',linewidth = 0.75) +
   scale_y_continuous(limits = c(0,10)) +
   scale_x_continuous(limits = c(0,10)) +
   labs(x = 'Bootstrap RTA (log2 scale)',y = 'Gibbs RTA (log2 scale)')+
   theme_bw(base_size = bs,base_family = 'sans') +
   theme(panel.grid = element_blank(),
-        axis.text = element_text(size = bs),
-        axis.title = element_text(size = bs))
-
-fig.rtama.salmon <- 
-  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
-  geom_point(alpha = 0.05,aes(y = log2(Salmon.Bootstrap/Salmon.Gibbs))) +
-  geom_line(aes(y = fc.expr.salmon.fit),linewidth = 0.5,color = '#3366FF') +
-  geom_abline(intercept = 0,slope = 0,color = 'red',linetype = 'dashed',linewidth = 0.5) +
-  scale_y_continuous(limits = c(-5.5,5.5)) +
-  labs(x = 'Average log2 CPM',y = 'RTA log2 fold-change')+
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        axis.text = element_text(size = bs),
-        axis.title = element_text(size = bs))
+        axis.text = element_text(colour = 'black',size = bs),
+        axis.title = element_text(colour = 'black',size = bs))
 
 fig.scatter.salmon
-fig.rtama.salmon
 ```
 
-```{r lung_boot_vs_gibbs_kallisto,fig.width = 3,fig.height = 3}
-fig.scatter.kallisto <- ggplot(data = dt.scatter,aes(x = log2(Kallisto.Bootstrap))) +
-  geom_point(alpha = 0.05,aes(y = log2(Salmon.Gibbs))) +
-  geom_line(aes(y = gibbs.kallisto.boot.fit),linewidth = 0.5,color = '#3366FF') +
-  geom_abline(intercept = 0,slope = 1,color = 'red',linetype = 'dashed',linewidth = 0.75) +
-  scale_y_continuous(limits = c(0,10)) +
-  scale_x_continuous(limits = c(0,10)) +
-  labs(x = 'Bootstrap RTA (log2 scale)',y = 'Gibbs RTA (log2 scale)')+
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        axis.text = element_text(size = bs),
-        axis.title = element_text(size = bs))
-
-fig.rtama.kallisto <- 
-  ggplot(data = dt.scatter,aes(x = Expr.Salmon.Gibbs)) +
-  geom_point(alpha = 0.05,aes(y = log2(Kallisto.Bootstrap/Salmon.Gibbs))) +
-  geom_line(aes(y = fc.expr.kallisto.fit),linewidth = 0.5,color = '#3366FF') +
-  geom_abline(intercept = 0,slope = 0,color = 'red',linetype = 'dashed',linewidth = 0.5) +
-  scale_y_continuous(limits = c(-7,7)) +
-  labs(x = 'Average log2 CPM',y = 'RTA log2 fold-change')+
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        axis.text = element_text(size = bs),
-        axis.title = element_text(size = bs))
-
-fig.scatter.kallisto
-fig.rtama.kallisto
-```
+Below are some summary statistics reported in our paper.
 
 ```{r lung_boot_vs_gibbs_summary}
 dt.scatter[,summary(Kallisto.Bootstrap/Salmon.Gibbs)]
@@ -365,7 +357,73 @@ dt.scatter[Expr.Salmon.Gibbs >1,summary(Kallisto.Bootstrap/Salmon.Gibbs)]
 dt.scatter[Expr.Salmon.Gibbs >1,summary(Salmon.Bootstrap/Salmon.Gibbs)]
 ```
 
+Then, I generate panel (b) of Figure 1.
+
+```{r lung_boot_vs_gibbs_salmon_v2,fig.width = 6,fig.height = 6}
+dt.scatter[,Expr.Salmon.Gibbs.Cut := cut(x = Expr.Salmon.Gibbs,breaks = c(-Inf,-1,0,1,2,3:6,Inf))]
+
+dt.scatter[,expr.salmon.boot.fit := .(loessFit(x = Expr.Salmon.Gibbs.Cut,y = log2(Salmon.Bootstrap),span = 0.8)$fitted)]
+dt.scatter[,expr.salmon.gibbs.fit := .(loessFit(x = Expr.Salmon.Gibbs.Cut,y = log2(Salmon.Gibbs),span = 0.8)$fitted)]
+
+
+dt.scatter.long <- 
+  melt(dt.scatter,
+       id.vars = c('TranscriptID','Expr.Salmon.Gibbs.Cut','Expr.Salmon.Gibbs'),
+       measure.vars = c('Salmon.Bootstrap','Salmon.Gibbs'),
+       variable.name = 'Method',value.name = 'Value')
+levels(dt.scatter.long$Method) <- c('Bootstrap','Gibbs')
+
+
+fig.rtama.salmon.v2 <- 
+  ggplot(data = dt.scatter.long,aes(x = Expr.Salmon.Gibbs.Cut,y = log2(Value))) +
+    geom_boxplot(aes(fill = Method),alpha = 0.5,col = 'black',coef = NULL,staplewidth = 1,linewidth = 0.25) +
+  scale_fill_manual(values = c('Bootstrap' = 'red','Gibbs' = 'blue')) +
+  labs(x = 'Average log2 CPM',y = 'RTA Overdispersion (log2 scale)') +
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(colour = 'black', size = bs),
+        axis.title = element_text(colour = 'black',size = bs),
+        legend.title = element_blank(),
+        legend.position = 'inside',
+        legend.position.inside = c(0.85, 0.85),
+        legend.text = element_text(colour = 'black', size = bs),
+        legend.background = element_rect(fill = alpha("white", 0)))
+
+fig.rtama.salmon.v2
+```
+
+Finally, the code chunk below generates Supplementary Figure S1.
+
+```{r lung_boot_vs_gibbs_scatter,fig.width = 5,fig.height = 5}
+fig.kallisto.salmon <- ggplot(data = dt.scatter,aes(y = log2(Kallisto.Bootstrap),x = log2(Salmon.Bootstrap))) +
+  geom_point(alpha = 1,shape = 16,size = 0.3) +
+  geom_abline(intercept = 0,slope = 1,color = 'gray',linetype = 'dashed',linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(x = 'Salmon Bootstrap RTA (log2 scale)',y = 'kallisto Bootstrap RTA (log2 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(colour = 'black',size = bs),
+        axis.title = element_text(colour = 'black',size = bs))
+
+fig.kallisto.salmongibbs <- ggplot(data = dt.scatter,aes(y = log2(Kallisto.Bootstrap),x = log2(Salmon.Gibbs))) +
+  geom_point(alpha = 1,shape = 16,size = 0.3) +
+  geom_abline(intercept = 0,slope = 1,color = 'gray',linetype = 'dashed',linewidth = 0.75) +
+  scale_y_continuous(limits = c(0,10)) +
+  scale_x_continuous(limits = c(0,10)) +
+  labs(y = 'kallisto Bootstrap RTA (log2 scale)',x = 'Salmon Gibbs RTA (log2 scale)')+
+  theme_bw(base_size = bs,base_family = 'sans') +
+  theme(panel.grid = element_blank(),
+        axis.text = element_text(colour = 'black',size = bs),
+        axis.title = element_text(colour = 'black',size = bs))
+
+fig.kallisto.salmon
+fig.kallisto.salmongibbs
+```
+
 ## Assessing convergence of RTA estimates
+
+The code chunks below generate a plot that was include in a previous version of Figure 1. I keep it here fore completeness.
 
 ```{r lung_avelogcpm}
 alcpm <- dt.scatter$Expr.Salmon.Gibbs
@@ -376,7 +434,7 @@ alcpm.cut <- cut(alcpm,breaks = c(-Inf, 1, Inf),
 names(alcpm.cut) <- names(alcpm)
 ```
 
-```{r lung_conv,results='hide'}
+```{r lung_conv,results='hide',eval=FALSE}
 foo <- function(b){
   cs.kallisto <- 
     catchKallisto2(paths = list.dirs(file.path(path.lung,'kallisto'),recursive = FALSE),
@@ -417,7 +475,7 @@ rta.out <- lapply(bseq,foo)
 df.rta <- rbindlist(rta.out)
 ```
 
-```{r lung_conv_df}
+```{r lung_conv_df,eval=FALSE}
 df.rta.reference <- df.rta[ResamplingNum == 100,c('TranscriptID','Kallisto.Boot','Salmon.Boot','Salmon.Gibbs')]
 setnames(df.rta.reference,
          old = c('Kallisto.Boot','Salmon.Boot','Salmon.Gibbs'),
@@ -440,7 +498,7 @@ df.rta.melt$AveLogCPM %<>%
   factor(levels = levels(.),labels = c("Average log2 CPM \u2264 1","Average log2 CPM > 1"))
 ```
 
-```{r lung_conv_df_salmon,fig.height=5,fig.width=5.5}
+```{r lung_conv_df_salmon,fig.height=5,fig.width=5.5,eval=FALSE}
 df.rta.melt.salmon  <- df.rta.melt[Type != 'kallisto-Bootstrap',]
 df.rta.melt.salmon$Type %<>%
   droplevels() %<>%
@@ -450,7 +508,7 @@ fig.resampling.salmon <-
   ggplot(data = df.rta.melt.salmon,
          aes(x = ResamplingNum,y = log2(Overdispersion))) +
   facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
-  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_line(aes(group = TranscriptID),linewidth = 0.025,alpha = 1) +
   geom_hline(yintercept = c(0),color = 'red',linetype = 'dashed',linewidth = 0.5) +
   scale_x_continuous(breaks = seq(10,100,10)) +
   theme_bw(base_size = bs,base_family = 'sans') +
@@ -462,7 +520,7 @@ fig.resampling.salmon <-
 fig.resampling.salmon
 ```
 
-```{r lung_conv_df_kallisto,fig.height=5,fig.width=5.5}
+```{r lung_conv_df_kallisto,fig.height=5,fig.width=5.5,eval=FALSE}
 df.rta.melt.kallisto  <- df.rta.melt[Type != 'Salmon-Bootstrap',]
 df.rta.melt.kallisto$Type %<>%
   droplevels() %<>%
@@ -472,7 +530,7 @@ fig.resampling.kallisto <-
   ggplot(data = df.rta.melt.kallisto[Type != 'Salmon-Bootstrap',],
          aes(x = ResamplingNum,y = log2(Overdispersion))) +
   facet_grid(cols = vars(Type),rows = vars(AveLogCPM)) +
-  geom_line(aes(group = TranscriptID),alpha = 0.1) +
+  geom_line(aes(group = TranscriptID),linewidth = 0.025,alpha = 1) +
   geom_hline(yintercept = c(0),color = 'red',linetype = 'dashed',linewidth = 0.5) +
   scale_x_continuous(breaks = seq(10,100,10)) +
   theme_bw(base_size = bs,base_family = 'sans') +
@@ -485,6 +543,8 @@ fig.resampling.kallisto
 ```
 
 ## Differential transcript expression
+
+Now we begin with the actual DTE analysis. I run all four pipelines in the code chunk below.
 
 ```{r lung_dte}
 design <- model.matrix(~group,data = dte.boot$samples)
@@ -514,12 +574,16 @@ dt.boot.edgeR.v4 <- decideTests(qlf.boot.edgeR.v4)
 dt.gibbs.edgeR.v4 <- decideTests(qlf.gibbs.edgeR.v4)
 ```
 
+Below is the summary of the DTE results from each method.
+
 ```{r lung_dte_summary}
 summary(dt.boot.edgeR.legacy)
 summary(dt.gibbs.edgeR.legacy)
 summary(dt.boot.edgeR.v4)
 summary(dt.gibbs.edgeR.v4)
 ```
+
+In the code chunk below, I generate panel (a) from Figure 5.
 
 ```{r lung_qldisp,fig.height=4,fig.width=5}
 plotQLDisp2 <- function (glmfit, xlab = "Average Log2 CPM", ylab = "Quarter-Root Mean Deviance", pch = 16, cex = 0.2, col.shrunk = "red", col.trend = "blue", col.raw = "black", fontsize = 8,...) 
@@ -573,6 +637,8 @@ fig.ql <- readPNG(file.ql, native = TRUE)
 
 ## Contrasting DTE between bootstrap and Gibbs pipelines
 
+Below I create the upset plot shown in panel (c) of Figure 5.
+
 ```{r lung_upset,fig.height=4,fig.width=5}
 dt.dte <- data.table(TranscriptID = rownames(dte.boot)[rownames(dte.boot) %in% gr.tx$transcript_id])
 dt.dte[,edgeR.boot.legacy := TranscriptID %in% rownames(dt.boot.edgeR.legacy)[dt.boot.edgeR.legacy !=0]]
@@ -614,6 +680,8 @@ fig.upset
 
 fig.upset <- readPNG(file.upset, native = TRUE)
 ```
+ 
+The scatterplots below are reported in panels (a) and (b) of Supplementary Figure S2.
 
 ```{r lung_bootonly,fig.width = 3,fig.height = 3}
 tx.gibbsonly <- 
@@ -657,6 +725,8 @@ fig.scatter.boot <- ggplot(data = dt.scatter[IsGibbsOnly == FALSE,],aes(x = log1
 
 fig.scatter.boot
 ```
+
+And the code chunk below generates Supplementary Figure S10.
 
 ```{r lung_densities,fig.width=4,fig.height=4}
 lcpm <- cpm(dte.gibbs.filtr,log = T)
@@ -738,6 +808,8 @@ dev.off()
 fig.density <- readPNG(file.density, native = TRUE)
 ```
 
+The heatmap below is the one reported in panel (d) of Figure 5.
+
 ```{r lung_heatmap,fig.height=12,fig.width=5}
 GK <- getGeneKEGGLinks(species.KEGG = "hsa")
 cancerGenes <- GK$GeneID[GK$PathwayID %in% c('hsa05223','hsa05200')]
@@ -776,7 +848,9 @@ dev.off()
 
 fig.heat <- readPNG(file.heat, native = TRUE)
 ```
-
+ 
+And, finally, the Venn diagram from panel (b) is created below. 
+ 
 ```{r lung_venn,fig.width=5,fig.height=4}
 df.venn <- data.frame(row.names = rownames(dte.boot))
 
@@ -907,6 +981,8 @@ dev.off()
 fig.venn <- readPNG(file.venn, native = TRUE)
 ```
 
+Some of the summary statistics reported in the main paper are calculated below.
+
 ```{r lung_newde}
 tx.newde <- 
   dt.dte[edgeR.boot.legacy == FALSE & 
@@ -1028,7 +1104,7 @@ plot.bcv.real.boot
 plot.bcv.real.gibbs
 ```
 
-To verify whether our simulated reproduces the caracteristics of the real data, we present BCV plots from raw and scaled counts from a single simulated dataset generated with unbalanced library sizes, 5 samples per group, 100bp paired-end read data, all references transcripts expressed, and quantified with Salmon.
+To verify whether our simulated reproduces the characteristics of the real data, we present BCV plots from raw and scaled counts from a single simulated dataset generated with unbalanced library sizes, 5 samples per group, 100bp paired-end read data, all references transcripts expressed, and quantified with Salmon.
 
 ```{r casestudy_res_bcv_sim,fig.height=3,fig.width=3}
 catch.sim.boot <- catchSalmon(list.dirs(file.path(path.sim,'quant-salmon'),recursive = FALSE))
@@ -1079,6 +1155,8 @@ plot.bcv.sim.gibbs
 
 ## Coverage plots
 
+Coverage plots reported in Figure 2 of the paper are created below with the `Gviz` package.
+
 ```{r lung_coverage}
 txdb <- 
   makeTxDbFromGRanges(gr[gr$transcript_id %in% gr.tx$transcript_id])
@@ -1115,7 +1193,7 @@ getGeneRanges <- function(entrezid,type = 'gene',flank = TRUE){
 
 getCoverage <- function(bam, lib.sizes, gr, param, labels = NULL, group.by = NULL, ...) {
   reads <- bplapply(seq_along(bam),function(i){
-    # For some readson csaw has trouble with library GSM5255705 and says
+    # For some reason csaw has trouble with library GSM5255705 and says
     # that all mate reads are unpaired.
     reads <- extractReads(bam.file = bam[i], gr, param = param,as.reads = TRUE)
   },...)
@@ -1277,19 +1355,21 @@ fig.coverage
 
 # Output files
 
+Finally, I export all these files to be included in our main paper and supplementary material.
+
 ```{r lung_output_main}
 # Plot RTA overdispersion
 fig.rta <- wrap_plots(A = fig.scatter.salmon,
-                      B = fig.rtama.salmon,
-                      C = fig.resampling.salmon,
-                      design = c(area(1,1),area(2,1),area(1,2,2,2)),
-                      widths = c(2.5,5.5)/8) + 
+                      B = fig.rtama.salmon.v2,
+                      design = c(area(1,1),area(1,2)),
+                      widths = c(2.5,4.5)/7) + 
   plot_annotation(tag_levels = 'a',
                   theme = theme(plot.tag = element_text(size = bs)))
 
 ggsave(plot = fig.rta,
        filename = file.path(path.misc,'Figure-RTA.png'),
-       device = 'png',width = 8,height = 5,units = 'in',dpi = 300)
+       device = 'png',width = 7,height = 2.5,units = 'in',dpi = 300)
+
 
 # Plot DTE
 fig.dte <- wrap_plots(A = wrap_elements(fig.ql),
@@ -1317,17 +1397,15 @@ ggsave(plot = fig.coverage,
 
 ```{r lung_output_supp}
 # Plot RTA overdispersion
-fig.rta.supp <- wrap_plots(A = fig.scatter.kallisto,
-                           B = fig.rtama.kallisto,
-                           C = fig.resampling.kallisto,
-                           design = c(area(1,1),area(2,1),area(1,2,2,2)),
-                           widths = c(2.5,5.5)/8) + 
+fig.rta.supp <- wrap_plots(A = fig.kallisto.salmon,
+                      B = fig.kallisto.salmongibbs,
+                      design = c(area(1,1),area(1,2))) + 
   plot_annotation(tag_levels = 'a',
                   theme = theme(plot.tag = element_text(size = bs)))
 
 ggsave(plot = fig.rta.supp,
        filename = file.path(path.misc,'SuppFigure-RTA.png'),
-       device = 'png',width = 8,height = 5,units = 'in',dpi = 300)
+       device = 'png',width = 6,height = 3,units = 'in',dpi = 300)
 
 # Plot densities
 fig.density.plot <- wrap_plots(A = wrap_elements(fig.density))
