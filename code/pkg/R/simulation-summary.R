@@ -1,16 +1,22 @@
-methodsNames <- function(){
-  method <- c(c('edger-raw','edger-scaled','edger-new-raw','edger-new-scaled','sleuth-lrt','sleuth-wt','swish'),paste0('edger-scaled-n',seq(10,90,10)),paste0('edger-new-scaled-n',seq(10,90,10)))
-  labels <- c('edgeR.legacy-RC','edgeR.legacy-SC','edgeR-RC','edgeR-SC','sleuth-LRT','sleuth-Wald','Swish',paste0('edgeR.legacy-SC.n',seq(10,90,10)),paste0('edgeR-SC.n',seq(10,90,10)))
-  color <- c(c('black','orange','black','blue',"purple","green3","gray"),rep('black',9),rep('black',9)) # To match TranscriptDE paper
+methodsNames <- function(large.simulation = FALSE){
+  if(!large.simulation){
+    method <- c(c('edger-raw','edger-scaled','edger-new-raw','edger-new-scaled','sleuth-lrt','sleuth-wt','swish'),paste0('edger-scaled-n',seq(10,90,10)),paste0('edger-new-scaled-n',seq(10,90,10)))
+    labels <- c('edgeR.legacy-RC','edgeR.legacy-SC','edgeR-RC','edgeR-SC','sleuth-LRT','sleuth-Wald','Swish',paste0('edgeR.legacy-SC.n',seq(10,90,10)),paste0('edgeR-SC.n',seq(10,90,10)))
+    color <- c(c('black','orange','black','blue',"purple","green3","gray"),rep('black',9),rep('black',9)) # To match TranscriptDE paper
+  } else{
+    method <- c(c('edger-raw','edger-scaled','edger-new-raw','edger-new-scaled','sleuth-lrt','sleuth-wt','swish'),paste0('edger-scaled-n',c(2,3)),paste0('edger-new-scaled-n',c(2,3)))
+    labels <- c('edgeR.legacy-RC','edgeR.legacy-SC','edgeR-RC','edgeR-SC','sleuth-LRT','sleuth-Wald','Swish',paste0('edgeR.legacy-SC.n',c(2,3)),paste0('edgeR-SC.n',c(2,3)))
+    color <- c(c('black','orange','black','blue',"purple","green3","gray"),rep('black',2),rep('black',2)) # To match TranscriptDE paper
+  }
 
   names(method) <- names(color) <- labels
   return(list(labels = labels,method = method,color = color))
 }
 
 #' @importFrom data.table data.table fread
-loadResults <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,simulation,quantifier){
+loadResults <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,simulation,quantifier,large.simulation){
 
-  meth <- methodsNames()
+  meth <- methodsNames(large.simulation)
   path.time <- file.path(path,'time.tsv')
   path.method <- file.path(path,paste0(meth$method,'.tsv.gz'))
   names(path.method) <- meth$labels
@@ -132,7 +138,7 @@ loadMetadata <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.per.g
   return(out)
 }
 
-aggregateScenario <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,quantifier,nsim){
+aggregateScenario <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,quantifier,nsim,large.simulation){
 
   subpath <- paste0('simulation-',seq_len(nsim))
 
@@ -147,7 +153,7 @@ aggregateScenario <- function(path,genome,len,fc,read,tx.per.gene,scenario,libs.
     res.path <- file.path(path,subpath[x],paste0('dte-',quantifier))
     message("Reading simulations from:")
     message(res.path)
-    loadResults(res.path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,x,quantifier)
+    loadResults(res.path,genome,len,fc,read,tx.per.gene,scenario,libs.per.group,x,quantifier,large.simulation)
   })
 
   ls.metadata <- lapply(seq_len(nsim),function(x){
@@ -415,21 +421,23 @@ summarizeROCCurve <- function(x,byvar){
 }
 
 #' @importFrom data.table fwrite
-summarizeQuantification <- function(path,dest,genome,fc,read,len,
+summarizeQuantification <- function(path,dest,genome,fc,read,len,large.simulation,
                                     tx.per.gene,scenario,libs.per.group,quantifier,
                                     nsim = 20, fdr = 0.05, seq.n = seq(100,3000,100),seq.fdr = c(1,5,10,15,20),alpha = fdr){
 
   byvar <- c('Genome','Length','FC','Reads','TxPerGene','Scenario','LibsPerGroup','Quantifier','Method','Simulation')
 
-  res <- aggregateScenario(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim)
+  res <- aggregateScenario(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim,large.simulation)
 
   table.metrics <- res$results[,computeMetrics(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = fdr,alpha = alpha),by = byvar]
+  table.metrics.1pct <- res$results[,computeMetrics(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = 0.01,alpha = 0.01),by = byvar]
   table.fdr <- res$results[,computeFDRCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,fdr = fdr,seq.n = seq.n),by = byvar]
   table.overdispersion <- summarizeOverdispersion(path, genome, len, fc, read, tx.per.gene, scenario, libs.per.group, quantifier, nsim)
   table.roc <- res$results[,computeROCCurve(c(.BY,.SD),simulation = res$simulation,features = res$features,seq.fdr = seq.fdr),by = byvar]
 
   out <- list('fdr' = summarizeFDRCurve(table.fdr,byvar),
               'metrics' = summarizeMetrics(table.metrics,byvar),
+              'metrics.1pct' = summarizeMetrics(table.metrics.1pct,byvar),
               'time' = summarizeTime(res$time,byvar),
               'quantile' = summarizeQQ(res$results,byvar),
               'pvalue' = summarizePValue(res$results,byvar),
@@ -450,7 +458,7 @@ summarizeQuantification <- function(path,dest,genome,fc,read,len,
   return(invisible())
 }
 
-summarizeScenario <- function(x,table,path,dest){
+summarizeScenario <- function(x,table,path,dest,large.simulation){
   dt <- as.character(table[x,])
   names(dt) <- colnames(table)
   table.names = c('fdr','metrics','time','quantile','pvalue','overdispersion','quanttime','roc')
@@ -467,6 +475,7 @@ summarizeScenario <- function(x,table,path,dest){
   if (!all(file.exists(file.path(out.path,'dte-salmon',paste0(table.names,'.tsv.gz'))))){
     # Verbose
     summarizeQuantification(path = in.path,quantifier = 'salmon',
+                            large.simulation = large.simulation,
                             dest = file.path(out.path,'dte-salmon'),
                             genome = dt['genome'],fc = dt['fc'],read = dt['read'],
                             tx.per.gene = dt['tx.per.gene'],scenario = dt['scenario'],
@@ -477,6 +486,7 @@ summarizeScenario <- function(x,table,path,dest){
   if (!all(file.exists(file.path(out.path,'dte-salmon-gibbs',paste0(table.names,'.tsv.gz'))))){
     # Verbose
     summarizeQuantification(path = in.path,quantifier = 'salmon-gibbs',
+                            large.simulation = large.simulation,
                             dest = file.path(out.path,'dte-salmon-gibbs'),
                             genome = dt['genome'],fc = dt['fc'],read = dt['read'],
                             tx.per.gene = dt['tx.per.gene'],scenario = dt['scenario'],
@@ -487,6 +497,7 @@ summarizeScenario <- function(x,table,path,dest){
   if (!all(file.exists(file.path(out.path,'dte-kallisto',paste0(table.names,'.tsv.gz'))))){
     # Verbose
     summarizeQuantification(path = in.path,quantifier = 'kallisto',
+                            large.simulation = large.simulation,
                             dest = file.path(out.path,'dte-kallisto'),
                             genome = dt['genome'],fc = dt['fc'],read = dt['read'],
                             tx.per.gene = dt['tx.per.gene'],scenario = dt['scenario'],
@@ -502,7 +513,8 @@ summarizeSimulation <- function(path,
                                 read = c('single-end','paired-end'),
                                 tx.per.gene = c(2,3,4,5,9999),
                                 scenario = c('balanced','unbalanced'),
-                                libs.per.group = c(3,5,10),...){
+                                libs.per.group = c(3,5,10),
+                                large.simulation = FALSE,...){
 
   path <- normalizePath(path)
   dir.create(dest,showWarnings = FALSE,recursive = TRUE)
@@ -517,7 +529,7 @@ summarizeSimulation <- function(path,
                              'libs.per.group' = paste0(libs.per.group,'libsPerGroup'),
                              stringsAsFactors = FALSE)
 
-  bplapply(seq_len(nrow(dt.scenario)),summarizeScenario,table = dt.scenario,dest = dest,path = path,...)
+  bplapply(seq_len(nrow(dt.scenario)),summarizeScenario,table = dt.scenario,dest = dest,path = path,large.simulation = large.simulation,...)
 
   return(invisible())
 }

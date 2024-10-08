@@ -79,36 +79,35 @@ runEdgeR <- function(targets,quantifier,scaled,legacy,...){
   cbind('feature' = rownames(out$table),out$table)
 }
 
-callMethods <- function(targets,quantifier,run.edger.only){
+callMethods <- function(targets,quantifier,run.dte.simulationlarge,seq.b){
+  # run.dte.simulationlarge is not actually used because we run all methods
 
   res <- list()
   time <- list()
 
-  if(!run.edger.only){
-    time[['sleuth-lrt']] <-
-      system.time({res[['sleuth-lrt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'lrt')})
+  time[['sleuth-lrt']] <-
+    system.time({res[['sleuth-lrt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'lrt')})
 
-    time[['sleuth-wt']] <-
-      system.time({res[['sleuth-wt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'wt')})
+  time[['sleuth-wt']] <-
+    system.time({res[['sleuth-wt']] <- runSleuth(targets = targets, quantifier = quantifier, test = 'wt')})
 
-    time[['swish']] <-
-      system.time({res[['swish']] <- runSwish(targets = targets, quantifier = quantifier)})
-  }
+  time[['swish']] <-
+    system.time({res[['swish']] <- runSwish(targets = targets, quantifier = quantifier)})
+
+  time[['edger-raw']] <-
+    system.time({res[['edger-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = TRUE)})
+  time[['edger-new-raw']] <-
+    system.time({res[['edger-new-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = FALSE)})
 
   time[['edger-scaled']] <-
     system.time({res[['edger-scaled']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = TRUE)})
 
-  time[['edger-raw']] <-
-    system.time({res[['edger-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = TRUE)})
-
   time[['edger-new-scaled']] <-
     system.time({res[['edger-new-scaled']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = FALSE)})
 
-  time[['edger-new-raw']] <-
-    system.time({res[['edger-new-raw']] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = FALSE,legacy = FALSE)})
 
   # Run edgeR-scaled (both new and old pipelines) with increasing number of bootstrap/Gibbs resamples
-  for (nboot.max in seq(2,3,10, 90, 10)) {
+  for (nboot.max in seq.b) {
     time[[paste0('edger-scaled-n',nboot.max)]] <-
       system.time({res[[paste0('edger-scaled-n',nboot.max)]] <- runEdgeR(targets = targets, quantifier = quantifier,scaled = TRUE,legacy = TRUE,nboot.max = nboot.max)})
     time[[paste0('edger-new-scaled-n',nboot.max)]] <-
@@ -126,7 +125,7 @@ callMethods <- function(targets,quantifier,run.edger.only){
   return(list('res' = res, 'time' = time))
 }
 
-runMethods <- function(path,dest,quantifier,run.edger.only){
+runMethods <- function(path,dest,quantifier,run.dte.simulationlarge,seq.b){
 
   path <- normalizePath(path)
   sample.names <- basename(list.dirs(path,full.names = TRUE,recursive = FALSE))
@@ -147,7 +146,7 @@ runMethods <- function(path,dest,quantifier,run.edger.only){
   targets$sample <- targets$names
   targets$path <- file.path(path,targets$names)
 
-  out <- callMethods(targets,quantifier,run.edger.only)
+  out <- callMethods(targets,quantifier,run.dte.simulationlarge,seq.b)
 
   for (meth.name in names(out$res)) {
     write_tsv(x = out$res[[meth.name]],

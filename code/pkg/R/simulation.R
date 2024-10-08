@@ -278,10 +278,11 @@ simulateExperiment <- function(dest,
                                run.salmon = TRUE,
                                run.kallisto = TRUE,
                                run.dte = TRUE,
-                               run.edger.only = FALSE,
+                               run.dte.simulationlarge = FALSE,
                                seed = NULL,
                                df.bcv = 40,
-                               bcv.true = 0.2){
+                               bcv.true = 0.2,
+                               seq.b = seq(10, 90, 10)){
 
   # Setting up parallel computing
   if (is.null(seed)) {
@@ -317,7 +318,7 @@ simulateExperiment <- function(dest,
 
   # Running methods
   if (isTRUE(run.dte)) {
-    runDTEMethods(dest = file.path(dest),run.salmon = run.salmon, run.kallisto = run.kallisto,run.edger.only = run.edger.only)
+    runDTEMethods(dest = file.path(dest),run.salmon = run.salmon, run.kallisto = run.kallisto,run.dte.simulationlarge = run.dte.simulationlarge,seq.b = seq.b)
   }
 
   # Organizing FASTQ files
@@ -331,11 +332,11 @@ simulateExperiment <- function(dest,
   }
 }
 
-runDTEMethods <- function(dest,run.salmon,run.kallisto,run.edger.only){
+runDTEMethods <- function(dest,run.salmon,run.kallisto,run.dte.simulationlarge,seq.b){
   if (run.salmon) {
     message('Running DTE methods with Salmon quantification (with bootstrap resampling)...')
     dir.create(file.path(dest,'dte-salmon'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon',run.edger.only = run.edger.only)
+    runMethods(path = file.path(dest,'quant-salmon'),dest = file.path(dest,'dte-salmon'),quantifier = 'salmon',run.dte.simulationlarge = run.dte.simulationlarge,seq.b = seq.b)
     if (file.exists(file.path(dest, 'dte-salmon', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
@@ -344,7 +345,7 @@ runDTEMethods <- function(dest,run.salmon,run.kallisto,run.edger.only){
 
     message('Running DTE methods with Salmon quantification (with Gibbs resampling)...')
     dir.create(file.path(dest,'dte-salmon-gibbs'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon',run.edger.only = run.edger.only)
+    runMethods(path = file.path(dest,'quant-salmon-gibbs'),dest = file.path(dest,'dte-salmon-gibbs'),quantifier = 'salmon',run.dte.simulationlarge = run.dte.simulationlarge,seq.b = seq.b)
     if (file.exists(file.path(dest, 'dte-salmon-gibbs', 'time.tsv'))) {
       message('DTE analysis w/ Salmon completed!')
     } else{
@@ -355,7 +356,7 @@ runDTEMethods <- function(dest,run.salmon,run.kallisto,run.edger.only){
   if (run.kallisto) {
     message('Running DTE methods with kallisto quantification...')
     dir.create(file.path(dest,'dte-kallisto'),recursive = TRUE,showWarnings = FALSE)
-    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto',run.edger.only = run.edger.only)
+    runMethods(path = file.path(dest,'quant-kallisto'),dest = file.path(dest,'dte-kallisto'),quantifier = 'kallisto',run.dte.simulationlarge = run.dte.simulationlarge,seq.b = seq.b)
     if (file.exists(file.path(dest, 'dte-kallisto', 'time.tsv'))) {
       message('DTE analysis w/ kallisto completed!')
     } else{
