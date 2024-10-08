@@ -12,7 +12,7 @@
 <meta name="author" content="Pedro L. Baldoni" />
 
 
-<title>Simulation results from the main article</title>
+<title>Simulation results from the supplement II (large-scale simulation)</title>
 
 <script src="site_libs/header-attrs-2.28/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -36,8 +36,6 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
-<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
-<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
 <link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
 <link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
 
@@ -357,8 +355,8 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Simulation results from the main
-article</h1>
+<h1 class="title toc-ignore">Simulation results from the supplement II
+(large-scale simulation)</h1>
 <h4 class="author">Pedro L. Baldoni</h4>
 <h4 class="date">09 October, 2024</h4>
 
@@ -873,8 +871,8 @@ have uncommitted changes.
 
 <p>
 These are the previous versions of the repository in which changes were
-made to the R Markdown (<code>analysis/simulation-paper.Rmd</code>) and
-HTML (<code>docs/simulation-paper.html</code>) files. If you’ve
+made to the R Markdown (<code>analysis/simulation-large-supp.Rmd</code>)
+and HTML (<code>docs/simulation-large-supp.html</code>) files. If you’ve
 configured a remote Git repository (see <code>?wflow_git_remote</code>),
 click on the hyperlinks in the table below to view the files as they
 were in that past version.
@@ -906,7 +904,7 @@ Message
 Rmd
 </td>
 <td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/529139fd5e42a74fb56dd280a7dfff3bf7ec88fd/analysis/simulation-paper.Rmd" target="_blank">529139f</a>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/529139fd5e42a74fb56dd280a7dfff3bf7ec88fd/analysis/simulation-large-supp.Rmd" target="_blank">529139f</a>
 </td>
 <td>
 Pedro Baldoni
@@ -918,74 +916,6 @@ Pedro Baldoni
 NARGAB Revision from October 2024
 </td>
 </tr>
-<tr>
-<td>
-html
-</td>
-<td>
-<a href="https://rawcdn.githack.com/plbaldoni/GibbsDTE-code/0f05c72d95b1b7cd24d5b3a722b581b99c102158/docs/simulation-paper.html" target="_blank">0f05c72</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-06-24
-</td>
-<td>
-Build site.
-</td>
-</tr>
-<tr>
-<td>
-Rmd
-</td>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/5b41ed5f084261614e731030520c6b9be08c173a/analysis/simulation-paper.Rmd" target="_blank">5b41ed5</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-06-24
-</td>
-<td>
-Printing out tables
-</td>
-</tr>
-<tr>
-<td>
-html
-</td>
-<td>
-<a href="https://rawcdn.githack.com/plbaldoni/GibbsDTE-code/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/simulation-paper.html" target="_blank">70ab63f</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-<td>
-Publishing workflowr
-</td>
-</tr>
-<tr>
-<td>
-Rmd
-</td>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/bebf9467a656497c42cb2a8f1a7e2e512b364682/analysis/simulation-paper.Rmd" target="_blank">bebf946</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-<td>
-Adding simulation Rmds
-</td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -995,11 +925,11 @@ Adding simulation Rmds
 </div>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>This Rmarkdown generates Figures 3 and 4 as well as Tables 1 and 2
-from our Gibbs DTE paper. The results are based on the simulation
-designed to emulate small-scale experiments with low biological
-variation and sample size, a typical scenario of RNA-seq studies with
-genetically modified organisms or cell lines.</p>
+<p>This Rmarkdown generates Supplementary Figures S11 and S12 from our
+Gibbs DTE paper. The results are based on the simulation designed to
+emulate large-scale experiments with large biological variation and
+sample size, a typical scenario of observational RNA-seq studies with
+human subjects.</p>
 <div id="setup" class="section level2">
 <h2>Setup</h2>
 <p>Below we set options for this Rmarkdown report and load the necessary
@@ -1018,30 +948,34 @@ library(magrittr)
 library(ggplot2)
 library(patchwork)
 library(plyr)
+library(edgeR)
+library(png)
 library(kableExtra)
 devtools::load_all(&#39;../code/pkg&#39;)</code></pre>
 <p>Next we set the paths to our simulation results.</p>
-<pre class="r"><code>path.misc &lt;- file.path(&#39;../misc/simulation.Rmd&#39;)
+<pre class="r"><code>path.misc &lt;- file.path(&#39;../misc/simulation-large-supp.Rmd&#39;)
 dir.create(path.misc,recursive = TRUE,showWarnings = FALSE)
 
-path.example &lt;- &quot;../output/simulation/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/5libsPerGroup&quot;
+path.example &lt;- &quot;../output/simulation-large/data/mm39/readlen-100/fc2/paired-end/9999TxPerGene/unbalanced/100libsPerGroup/simulation-1&quot;
 
 path.fdr &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;fdr.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;fdr.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.metrics &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;metrics.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;metrics.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+path.metrics.1pct &lt;-
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;metrics.1pct.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.time &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;^time.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;^time.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.quanttime &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;quanttime.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;quanttime.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.quantile &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;quantile.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;quantile.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.pvalue &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;pvalue.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;pvalue.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.overdispersion &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;overdispersion.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;overdispersion.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)
 path.roc &lt;-
-  list.files(&#39;../output/simulation/summary&#39;,&#39;roc.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)</code></pre>
+  list.files(&#39;../output/simulation-large/summary&#39;,&#39;roc.tsv.gz&#39;,recursive = TRUE,full.names = TRUE)</code></pre>
 </div>
 <div id="data-loading" class="section level2">
 <h2>Data loading</h2>
@@ -1050,11 +984,11 @@ variables.</p>
 <pre class="r"><code>relabel &lt;- function(x){
   y &lt;- copy(x)
   y$TxPerGene %&lt;&gt;% factor(levels = paste0(c(2, 3, 4, 5, 9999), &#39;TxPerGene&#39;),labels = c(paste0(&quot;#Tx/Gene = &quot;, c(2, 3, 4, 5)), &#39;All Transcripts&#39;)) %&lt;&gt;% droplevels()
-  y$LibsPerGroup %&lt;&gt;% factor(levels = paste0(c(3, 5, 10), &#39;libsPerGroup&#39;),labels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10))) %&lt;&gt;% droplevels()
+  y$LibsPerGroup %&lt;&gt;% factor(levels = paste0(c(3, 5, 10,100), &#39;libsPerGroup&#39;),labels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10,100))) %&lt;&gt;% droplevels()
   y$Quantifier %&lt;&gt;% factor(levels = c(&#39;salmon&#39;,&#39;salmon-gibbs&#39;,&#39;kallisto&#39;),labels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;,&#39;kallisto&#39;)) %&lt;&gt;% droplevels()
   y$Length %&lt;&gt;% factor(levels = paste0(&#39;readlen-&#39;, seq(50, 150, 25)),labels = paste0(seq(50, 150, 25), &#39;bp&#39;)) %&lt;&gt;% droplevels()
   if (!is.null(x$Sample)) {
-    y$Sample %&lt;&gt;% factor(levels = c(paste0(&quot;groupA_rep&quot;,1:10,&quot;_R1&quot;),paste0(&quot;groupB_rep&quot;,1:10,&quot;_R1&quot;)),labels = c(paste0(&quot;A&quot;,1:10),paste0(&quot;B&quot;,1:10))) %&lt;&gt;% droplevels()
+    y$Sample %&lt;&gt;% factor(levels = c(paste0(&quot;groupA_rep&quot;,1:100,&quot;_R1&quot;),paste0(&quot;groupB_rep&quot;,1:100,&quot;_R1&quot;)),labels = c(paste0(&quot;A&quot;,1:100),paste0(&quot;B&quot;,1:100))) %&lt;&gt;% droplevels()
   }
   return(y)
 }
@@ -1062,6 +996,7 @@ variables.</p>
 # Loading datasets
 dt.fdr &lt;- do.call(rbind,lapply(path.fdr,fread)) %&gt;% relabel()
 dt.metrics &lt;- do.call(rbind,lapply(path.metrics,fread)) %&gt;% relabel()
+dt.metrics.1pct &lt;- do.call(rbind,lapply(path.metrics.1pct,fread)) %&gt;% relabel()
 dt.time &lt;- do.call(rbind,lapply(path.time,fread)) %&gt;% relabel()
 dt.quanttime &lt;- do.call(rbind,lapply(path.quanttime,fread)) %&gt;% relabel()
 dt.quantile &lt;- do.call(rbind,lapply(path.quantile,fread)) %&gt;% relabel()
@@ -1070,15 +1005,113 @@ dt.overdispersion &lt;- do.call(rbind,lapply(path.overdispersion,fread)) %&gt;% 
 dt.roc &lt;- do.call(rbind,lapply(path.roc,fread)) %&gt;% relabel()</code></pre>
 </div>
 </div>
+<div id="bcv-plots" class="section level1">
+<h1>BCV plots</h1>
+<p>First we compute the BCV plots from Supplementary Figure S11. These
+BCV plots are from a single simulated experiment and are shown as an
+example of the count scaling effect on the estimated BCV
+coefficients.</p>
+<pre class="r"><code>quant.gibbs &lt;- list.dirs(file.path(path.example,&#39;quant-salmon-gibbs&#39;),recursive = FALSE,full.names = TRUE)
+
+cs.gibbs &lt;- catchSalmon(quant.gibbs,verbose = FALSE)
+group &lt;- strsplit2(basename(colnames(cs.gibbs$counts)),&quot;_&quot;)[,1]
+design &lt;- model.matrix(~group)
+
+dge.gibbs.raw &lt;- DGEList(counts = cs.gibbs$counts,
+                         group = group,
+                         annotation = cs.gibbs$annotation)
+
+dge.gibbs.raw &lt;- dge.gibbs.raw[filterByExpr(dge.gibbs.raw,design),,keep.lib.sizes = FALSE]
+dge.gibbs.raw &lt;- normLibSizes(dge.gibbs.raw)
+dge.gibbs.raw &lt;- estimateDisp(dge.gibbs.raw,design = design)
+
+dge.gibbs.scaled &lt;- DGEList(counts = cs.gibbs$counts/cs.gibbs$annotation$Overdispersion,
+                            group = group,
+                            annotation = cs.gibbs$annotation)
+
+dge.gibbs.scaled &lt;- dge.gibbs.scaled[filterByExpr(dge.gibbs.scaled,design),,keep.lib.sizes = FALSE]
+dge.gibbs.scaled &lt;- normLibSizes(dge.gibbs.scaled)
+dge.gibbs.scaled &lt;- estimateDisp(dge.gibbs.scaled,design = design)
+
+plotBCV2 &lt;- function(y, xlab=&quot;Average log CPM&quot;, ylab=&quot;Biological coefficient of variation&quot;, pch=16, cex=0.2, col.common=&quot;red&quot;, col.trend=&quot;blue&quot;, col.tagwise=&quot;black&quot;,fontsize = 8,...)
+{
+  if(!is(y,&quot;DGEList&quot;)) stop(&quot;y must be a DGEList.&quot;)
+  
+  A &lt;- y$AveLogCPM
+  if(is.null(A)) A &lt;- aveLogCPM(y$counts, offset=getOffset(y))
+  
+  disp &lt;- getDispersion(y)
+  if(is.null(disp)) stop(&quot;No dispersions to plot&quot;)
+  if(attr(disp,&quot;type&quot;)==&quot;common&quot;) disp &lt;- rep_len(disp, length(A))
+  
+  plot(A, sqrt(disp), xlab=xlab, ylab=ylab, type=&quot;n&quot;, cex.lab = fontsize/12,
+       cex.axis = fontsize/12,...)
+  labels &lt;- cols &lt;- lty &lt;- pt &lt;- NULL
+  if(!is.null(y$tagwise.dispersion)) {
+    points(A, sqrt(y$tagwise.dispersion), pch=pch, cex=cex, col=col.tagwise)
+    labels &lt;- c(labels, &quot;Tagwise&quot;)
+    cols &lt;- c(cols, col.tagwise)
+    lty &lt;- c(lty, -1)
+    pt &lt;- c(pt, pch)
+  }
+  if(!is.null(y$common.dispersion)) {
+    abline(h=sqrt(y$common.dispersion), col=col.common, lwd=2)
+    labels &lt;- c(labels, &quot;Common&quot;)
+    cols &lt;- c(cols, col.common)
+    lty &lt;- c(lty, 1)
+    pt &lt;- c(pt, -1)     
+  }
+  if(!is.null(y$trended.dispersion)) {
+    o &lt;- order(A)
+    lines(A[o], sqrt(y$trended.dispersion)[o], col=col.trend, lwd=2)
+    labels &lt;- c(labels, &quot;Trend&quot;)
+    cols &lt;- c(cols, col.trend)
+    lty &lt;- c(lty, 1)
+    pt &lt;- c(pt, -1)     
+  }
+  legend(&quot;topright&quot;, legend=labels, lty=lty, pch=pt, pt.cex=cex, lwd=2, col=cols,cex = fontsize/12)
+  
+  invisible()
+}
+
+fig.bcv.raw &lt;- wrap_elements(full = ~ plotBCV2(dge.gibbs.raw))
+fig.bcv.scaled &lt;- wrap_elements(full = ~ plotBCV2(dge.gibbs.scaled))
+
+file.raw &lt;- tempfile(&quot;raw&quot;,fileext = &#39;.png&#39;)
+png(file.raw,width = 3.5,height = 2.75,units = &#39;in&#39;,res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.bcv.raw
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.bcv.raw &lt;- readPNG(file.raw, native = TRUE)
+
+file.scaled &lt;- tempfile(&quot;scaled&quot;,fileext = &#39;.png&#39;)
+png(file.scaled,width = 3.5,height = 2.75,units = &#39;in&#39;,res = 300)
+par(mar = c(3, 3, 0.25, 0.25),mgp = c(2,1,0))
+fig.bcv.scaled
+dev.off()</code></pre>
+<pre><code>png 
+  2 </code></pre>
+<pre class="r"><code>fig.bcv.scaled &lt;- readPNG(file.scaled, native = TRUE)
+
+wrap_plots(A = wrap_elements(fig.bcv.raw),
+           B = wrap_elements(fig.bcv.scaled),
+           design = c(area(1,1),area(1,2))) +
+  plot_annotation(tag_levels = &#39;a&#39;,theme = theme(plot.tag = element_text(size = bs)))</code></pre>
+<p><img src="figure/simulation-large-supp.Rmd/simulation_bcv-1.png" width="2100" style="display: block; margin: auto;" /></p>
+</div>
 <div id="power" class="section level1">
 <h1>Power</h1>
-<p>Below I compute the barplot of Figure 3.</p>
+<p>Below I compute the barplots of Supplementary Figure S11. Panel (c)
+reports the observed power and FDR under a nominal FDR threshold of
+0.05.</p>
 <pre class="r"><code>dt.power &lt;- dt.metrics[FC == &#39;fc2&#39; &amp;
                          Quantifier != &#39;kallisto&#39; &amp;
                          !grepl(&quot;\\.n|RC&quot;,Method) &amp;
                          Scenario == &#39;unbalanced&#39;,]
 
-dt.power$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
+dt.power$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10,100)),labels = paste0(c(3,5,10,100),&#39; samples per group&#39;))
 dt.power$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
 dt.power$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
 dt.power$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),to = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
@@ -1105,7 +1138,7 @@ plot.power &lt;- function(df.bar,df.txt,scenario,library,legend = FALSE, base_si
               vjust = 0,data = tb.txt,size = base_size/.pt,inherit.aes = FALSE) +
     scale_fill_manual(values = c(&#39;#ff0000&#39;,&#39;#bebebe&#39;)) +
     labs(x = NULL,y = paste(&#39;DE Transcripts&#39;)) +
-    scale_y_continuous(limits = c(0,3250)) +
+    scale_y_continuous(limits = c(0,6000)) +
     theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
     theme(panel.grid = element_blank(),
           # axis.text.x = element_text(angle = 90),
@@ -1113,9 +1146,9 @@ plot.power &lt;- function(df.bar,df.txt,scenario,library,legend = FALSE, base_si
           strip.text = element_text(size = base_size)) +
     if (legend == TRUE) theme(legend.background = element_rect(fill = alpha(&#39;white&#39;, 0)),
                               legend.text = element_text(size = base_size),
+                              legend.position.inside = c(0.9,0.825),
                               legend.position = &#39;inside&#39;,
-                              legend.position.inside = c(0.95,0.825),
-                              legend.direction = &#39;vertical&#39;,
+                              legend.direction = &#39;horizontal&#39;,
                               legend.title = element_blank(),
                               legend.key.size = unit(0.75,&quot;line&quot;)) else theme(legend.position = &#39;none&#39;)
 }
@@ -1123,240 +1156,86 @@ plot.power &lt;- function(df.bar,df.txt,scenario,library,legend = FALSE, base_si
 fig.power &lt;- plot.power(df.bar = x.melt,
                         df.txt = dt.power,
                         scenario = &#39;Unequal library sizes&#39;,
-                        library = &#39;5 samples per group&#39;,
+                        library = &#39;100 samples per group&#39;,
                         legend = TRUE)
 
 fig.power</code></pre>
-<p><img src="figure/simulation-paper.Rmd/simulation_power-1.png" width="1800" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-simulation_power-1">
-Past versions of simulation_power-1.png
-</button>
-</p>
-<div id="fig-simulation_power-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/figure/simulation-paper.Rmd/simulation_power-1.png" target="_blank">70ab63f</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div id="fdr" class="section level1">
-<h1>FDR</h1>
-<p>Below I compute the false discovery curves of Figure 3.</p>
-<pre class="r"><code>dt.fdr.plot &lt;- dt.fdr[FC == &#39;fc2&#39; &amp;
-                        Quantifier != &#39;kallisto&#39; &amp;
-                        !grepl(&quot;\\.n|RC&quot;,Method) &amp;
-                        Scenario == &#39;unbalanced&#39;,]
+<p><img src="figure/simulation-large-supp.Rmd/simulation_power-1.png" width="2400" style="display: block; margin: auto;" /></p>
+<p>Analogously, we create panel (d), which reports the observed power
+and FDR under a nominal FDR threshold of 0.01.</p>
+<pre class="r"><code>dt.power.1pct &lt;- dt.metrics.1pct[FC == &#39;fc2&#39; &amp;
+                                   Quantifier != &#39;kallisto&#39; &amp;
+                                   !grepl(&quot;\\.n|RC&quot;,Method) &amp;
+                                   Scenario == &#39;unbalanced&#39;,]
 
-colmeth &lt;- methodsNames()$color
-names(colmeth) &lt;- gsub(&#39;^edgeR-SC$&#39;,&#39;edgeR-v4&#39;,names(colmeth))
-names(colmeth) &lt;- gsub(&#39;^edgeR.legacy-SC$&#39;,&#39;edgeR-v3&#39;,names(colmeth))
+dt.power.1pct$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10,100)),labels = paste0(c(3,5,10,100),&#39; samples per group&#39;))
+dt.power.1pct$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
+dt.power.1pct$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
+dt.power.1pct$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),to = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
 
-dt.fdr.plot$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
-dt.fdr.plot$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
-dt.fdr.plot$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;)) %&lt;&gt;% factor(levels = c(&#39;Gibbs&#39;,&#39;Bootstrap&#39;))
-dt.fdr.plot$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),to = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
+dt.power.1pct[, FDR := roundPretty(ifelse((FP+TP) == 0,NA,100*FP/(FP+TP)),1)]
 
-dt.fdr.plot$Method %&lt;&gt;% factor(levels = c(&#39;Swish&#39;,
-                                          &#39;sleuth-Wald&#39;,
-                                          &#39;sleuth-LRT&#39;,
-                                          &#39;edgeR-v3&#39;,
-                                          &#39;edgeR-v4&#39;))
+x.melt.1pct &lt;- melt(dt.power.1pct,id.vars = colnames(dt.power.1pct)[-which(colnames(dt.power.1pct) %in% c(&#39;P.SIG&#39;,&#39;TP&#39;,&#39;FP&#39;))],
+                    measure.vars = c(&#39;TP&#39;,&#39;FP&#39;),
+                    variable.name = &#39;Type&#39;,
+                    value.name = &#39;Value&#39;)
+x.melt.1pct$Type &lt;-
+  factor(x.melt.1pct$Type,
+         levels = c(&#39;FP&#39;,&#39;TP&#39;),
+         labels = c(&#39;False&#39;,&#39;True&#39;))
 
-plot.fdr &lt;- function(df.line,scenario,library,legend = FALSE,base_size = bs,color = colmeth,
-                     ylim = c(0,800),xlim = c(0,300),...){
-  tb.bar &lt;- df.line[Scenario == scenario &amp; LibsPerGroup == library,]
-  
-  ggplot(tb.bar,aes(x = N,y = FDR,color = Method,linetype = Quantifier)) +
-    geom_line(linewidth = 0.7) +
-    scale_color_manual(values = color,
-                       breaks = c(&#39;edgeR-v3&#39;,
-                                  &#39;edgeR-v4&#39;,
-                                  &#39;sleuth-LRT&#39;,
-                                  &#39;sleuth-Wald&#39;,
-                                  &#39;Swish&#39;)) +
-    coord_cartesian(xlim = xlim,ylim = ylim) +
-    labs(y = &#39;False discoveries&#39;,x = &#39;Transcripts chosen&#39;) +
+plot.power &lt;- function(df.bar,df.txt,scenario,library,legend = FALSE, base_size = bs){
+  tb.bar &lt;- df.bar[Scenario == scenario &amp; LibsPerGroup == library,]
+  tb.txt &lt;- df.txt[Scenario == scenario &amp; LibsPerGroup == library,][FDR != &#39;NA&#39;,]
+  gap &lt;- 0.05*max(dt.power.1pct$TP + dt.power.1pct$FP)
+  ggplot(tb.bar,aes(x = Quantifier,y = Value,fill = Type)) +
+    facet_wrap(facets = &quot;Method&quot;,nrow = 1) +
+    geom_col() +
+    geom_text(aes(x = Quantifier,y = (TP + FP) +  gap,label = FDR),
+              vjust = 0,data = tb.txt,size = base_size/.pt,inherit.aes = FALSE) +
+    scale_fill_manual(values = c(&#39;#ff0000&#39;,&#39;#bebebe&#39;)) +
+    labs(x = NULL,y = paste(&#39;DE Transcripts&#39;)) +
+    scale_y_continuous(limits = c(0,6000)) +
     theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
     theme(panel.grid = element_blank(),
-          axis.text = element_text(colour = &#39;black&#39;,size = base_size)) +
+          # axis.text.x = element_text(angle = 90),
+          axis.text = element_text(colour = &#39;black&#39;,size = base_size),
+          strip.text = element_text(size = base_size)) +
     if (legend == TRUE) theme(legend.background = element_rect(fill = alpha(&#39;white&#39;, 0)),
-                              legend.direction = &#39;vertical&#39;,
-                              legend.box = &#39;horizontal&#39;,
-                              legend.position = c(0.4,0.8),
                               legend.text = element_text(size = base_size),
+                              legend.position.inside = c(0.9,0.825),
+                              legend.position = &#39;inside&#39;,
+                              legend.direction = &#39;horizontal&#39;,
                               legend.title = element_blank(),
                               legend.key.size = unit(0.75,&quot;line&quot;)) else theme(legend.position = &#39;none&#39;)
 }
 
-fig.fdr &lt;- plot.fdr(df.line = dt.fdr.plot[N &lt;= 2500,],
-                    scenario = &#39;Unequal library sizes&#39;,
-                    library = &#39;5 samples per group&#39;,
-                    ylim = c(0,310),
-                    xlim = c(0,2500),
-                    legend = TRUE)</code></pre>
-<pre><code>Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2
-3.5.0.
-ℹ Please use the `legend.position.inside` argument of `theme()` instead.
-This warning is displayed once every 8 hours.
-Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-generated.</code></pre>
-<pre class="r"><code>fig.fdr</code></pre>
-<p><img src="figure/simulation-paper.Rmd/simulation_fdr-1.png" width="1050" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-simulation_fdr-1">
-Past versions of simulation_fdr-1.png
-</button>
-</p>
-<div id="fig-simulation_fdr-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/figure/simulation-paper.Rmd/simulation_fdr-1.png" target="_blank">70ab63f</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</div>
-<div id="error-rate" class="section level1">
-<h1>Error rate</h1>
-<p>Finally, the code chunk below generates the bar plot showing the
-observed type 1 error rate calculated from our null simulations.</p>
-<pre class="r"><code>dt.type1error &lt;- dt.metrics[FC == &#39;fc1&#39; &amp;
-                              Quantifier == &#39;Salmon-Gibbs&#39; &amp;
-                              !grepl(&quot;\\.n|RC&quot;,Method) &amp;
-                              Scenario == &#39;unbalanced&#39;,]
+fig.power.1pct &lt;- plot.power(df.bar = x.melt.1pct,
+                             df.txt = dt.power.1pct,
+                             scenario = &#39;Unequal library sizes&#39;,
+                             library = &#39;100 samples per group&#39;,
+                             legend = TRUE)
 
-dt.type1error$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5,10)),labels = paste0(c(3,5,10),&#39; samples per group&#39;))
-dt.type1error$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
-dt.type1error$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Gibbs&#39;),labels = c(&#39;Gibbs&#39;))
-dt.type1error$Method %&lt;&gt;% mapvalues(from = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;,&#39;sleuth-LRT&#39;,&#39;sleuth-Wald&#39;,&#39;Swish&#39;),to = c(&#39;edgeR\nv4&#39;,&#39;edgeR\nv3&#39;,&#39;sleuth\nLRT&#39;,&#39;sleuth\nWald&#39;,&#39;Swish&#39;))
-
-x.melt &lt;-
-  melt(dt.type1error,
-       id.vars = colnames(dt.type1error)[-which(colnames(dt.type1error) %in% c(&#39;P.SIG&#39;,&#39;TP&#39;,&#39;FP&#39;))],
-       measure.vars = c(&#39;P.SIG&#39;),variable.name = &#39;Type&#39;,value.name = &#39;Value&#39;)
-
-plot.type1error &lt;- function(df.bar,scenario,library,legend = FALSE,base_size = bs){
-  tb.bar &lt;- df.bar[Scenario == scenario &amp; LibsPerGroup == library,]
-  ggplot(tb.bar,aes(x = Method,y = Value)) +
-    geom_col(fill = &quot;#bebebe&quot;) +
-    geom_hline(yintercept = 0.05,color = &#39;#ff0000&#39;,linetype = &#39;dashed&#39;,linewidth = 0.5) +
-    labs(x = NULL,y = paste(&#39;Type 1 error rate&#39;)) +
-    scale_y_continuous(limits = c(0,0.06),breaks = seq(0,0.06,0.01)) +
-    theme_bw(base_size = base_size,base_family = &#39;sans&#39;) +
-    theme(panel.grid = element_blank(),
-          axis.text.x = element_text(angle = 0),
-          axis.text = element_text(colour = &#39;black&#39;,size = base_size))
-}
-
-fig.type1error &lt;- plot.type1error(df.bar = x.melt,
-                                  scenario = &#39;Unequal library sizes&#39;,
-                                  library = &#39;5 samples per group&#39;)
-
-fig.type1error</code></pre>
-<p><img src="figure/simulation-paper.Rmd/simulation_error-1.png" width="900" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-simulation_error-1">
-Past versions of simulation_error-1.png
-</button>
-</p>
-<div id="fig-simulation_error-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/figure/simulation-paper.Rmd/simulation_error-1.png" target="_blank">70ab63f</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
+fig.power.1pct</code></pre>
+<p><img src="figure/simulation-large-supp.Rmd/simulation_power_1pct-1.png" width="2400" style="display: block; margin: auto;" /></p>
 </div>
 <div id="roc-curves" class="section level1">
 <h1>ROC curves</h1>
-<p>Below is the code chunk to generate Figure 4.</p>
+<p>Below I generate the plots showing observed power and FDR under
+different nominal FDR threshold values and number of resamples. This is
+panel (e) from Supplementary Figure S11.</p>
 <pre class="r"><code>dt.rcurve &lt;- dt.roc[FC == &#39;fc2&#39; &amp;
                       grepl(&quot;edgeR-SC|edgeR-SC\\.n&quot;,Method) &amp;
                       Scenario == &#39;unbalanced&#39; &amp;
                       Quantifier != &#39;kallisto&#39;,]
 
-dt.rcurve$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10)),labels = paste0(c(&#39;Three&#39;,&#39;Five&#39;, &#39;Ten&#39;),&#39; samples per group&#39;))
+dt.rcurve$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;, c(3, 5, 10,100)),labels = paste0(c(&#39;Three&#39;,&#39;Five&#39;, &#39;Ten&#39;,&#39;Hundred&#39;),&#39; samples per group&#39;))
 dt.rcurve$Scenario %&lt;&gt;% factor(levels = c(&#39;balanced&#39;,&#39;unbalanced&#39;),labels = c(&#39;Equal library sizes&#39;,&#39;Unequal library sizes&#39;))
 dt.rcurve$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
 dt.rcurve$Method %&lt;&gt;%
-  factor(levels = c(paste0(&#39;edgeR-SC.n&#39;,seq(10,90,10)),&#39;edgeR-SC&#39;)) %&lt;&gt;%
-  mapvalues(from = c(paste0(&#39;edgeR-SC.n&#39;,seq(10,90,10)),&#39;edgeR-SC&#39;),to = paste0(seq(10,100,10)))
+  factor(levels = c(paste0(&#39;edgeR-SC.n&#39;,c(2,3)),&#39;edgeR-SC&#39;)) %&lt;&gt;%
+  mapvalues(from = c(paste0(&#39;edgeR-SC.n&#39;,c(2,3)),&#39;edgeR-SC&#39;),to = paste0(c(2,3,20)))
+
 
 dt.rcurve.long &lt;- melt(dt.rcurve,
                        id.vars = c(&#39;Genome&#39;,&#39;Length&#39;,&#39;FC&#39;,&#39;Reads&#39;,&#39;TxPerGene&#39;,&#39;Scenario&#39;,&#39;LibsPerGroup&#39;,&#39;Quantifier&#39;,&#39;Method&#39;,&#39;nFDR&#39;),
@@ -1393,239 +1272,27 @@ foo &lt;- function(x,lib,type,ylab,title = NULL,base_size = bs,legend = TRUE,...
   p
 }
 
-fig.roc.three.tpr &lt;- foo(dt.rcurve.long,lib = &#39;Three samples per group&#39;,type = &#39;oTPR&#39;,ylab = &#39;Observed Power&#39;,ylim = c(0.1,0.7)) + labs(x = NULL,title = &quot;n = 3&quot;)
-fig.roc.five.tpr &lt;- foo(dt.rcurve.long,lib = &#39;Five samples per group&#39;,type = &#39;oTPR&#39;,ylab = &#39;Observed Power&#39;,ylim = c(0.55,0.9)) + labs(x = NULL,y = NULL,title = &quot;n = 5&quot;)
-fig.roc.ten.tpr &lt;- foo(dt.rcurve.long,lib = &#39;Ten samples per group&#39;,type = &#39;oTPR&#39;,ylab = &#39;Observed Power&#39;,ylim = c(0.875,0.975)) + labs(x = NULL,y = NULL,title = &quot;n = 10&quot;) + scale_y_continuous(breaks = c(0.88,0.92,0.96))
+fig.roc.hundred.tpr &lt;- foo(dt.rcurve.long,lib = &#39;Hundred samples per group&#39;,type = &#39;oTPR&#39;,ylab = &#39;Observed Power&#39;,ylim = c(0.9,1))
+fig.roc.hundred.fdr &lt;- foo(dt.rcurve.long,lib = &#39;Hundred samples per group&#39;,type = &#39;oFDR&#39;,ylab = &#39;Observed FDR&#39;,ylim = c(0,0.2))
 
-fig.roc.three.fdr &lt;- foo(dt.rcurve.long,lib = &#39;Three samples per group&#39;,type = &#39;oFDR&#39;,ylab = &#39;Observed FDR&#39;,ylim = c(0,0.2))
-fig.roc.five.fdr &lt;- foo(dt.rcurve.long,lib = &#39;Five samples per group&#39;,type = &#39;oFDR&#39;,ylab = &#39;Observed FDR&#39;,ylim = c(0,0.2)) + labs(y = NULL)
-fig.roc.ten.fdr &lt;- foo(dt.rcurve.long,lib = &#39;Ten samples per group&#39;,type = &#39;oFDR&#39;,ylab = &#39;Observed FDR&#39;,ylim = c(0,0.2)) + labs(y = NULL)
-
-wrap_plots(A = fig.roc.three.tpr,
-           B = fig.roc.five.tpr,
-           C = fig.roc.ten.tpr,
-           D = fig.roc.three.fdr,
-           E = fig.roc.five.fdr,
-           `F` = fig.roc.ten.fdr,
-           design = c(area(1,1),area(1,2),area(1,3),
-                      area(2,1),area(2,2),area(2,3))) + 
+fig.roc &lt;- wrap_plots(A = fig.roc.hundred.tpr,
+                      B = fig.roc.hundred.fdr,
+                      design = c(area(1,1),area(1,2))) +
   plot_layout(guides = &#39;collect&#39;) &amp; theme(
     legend.position = &#39;bottom&#39;,
-    legend.direction = &#39;horizontal&#39;)</code></pre>
-<p><img src="figure/simulation-paper.Rmd/simulation_roc-1.png" width="2100" style="display: block; margin: auto;" /></p>
-<p>
-<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-simulation_roc-1">
-Past versions of simulation_roc-1.png
-</button>
-</p>
-<div id="fig-simulation_roc-1" class="collapse">
-<div class="table-responsive">
-<table class="table table-condensed table-hover">
-<thead>
-<tr>
-<th>
-Version
-</th>
-<th>
-Author
-</th>
-<th>
-Date
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/blob/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/figure/simulation-paper.Rmd/simulation_roc-1.png" target="_blank">70ab63f</a>
-</td>
-<td>
-Pedro Baldoni
-</td>
-<td>
-2024-04-05
-</td>
-</tr>
-</tbody>
-</table>
+    legend.direction = &#39;horizontal&#39;)
+
+fig.roc</code></pre>
+<p><img src="figure/simulation-large-supp.Rmd/simulation_roc-1.png" width="1800" style="display: block; margin: auto;" /></p>
 </div>
-</div>
-</div>
-<div id="quantification-time" class="section level1">
-<h1>Quantification time</h1>
-<p>The code chunk below generates Table 1.</p>
-<pre class="r"><code>dt.salmontime &lt;- dt.quanttime[Quantifier != &#39;kallisto&#39;,
-                              .(TotalTime = mean(Time)/60,
-                                ResamplingTime = mean(ResamplingTime)/60),
-                              by = c(&#39;LibSize&#39;,&#39;Quantifier&#39;)]
-
-dt.salmontime$QuantTime &lt;- dt.salmontime$TotalTime - dt.salmontime$ResamplingTime
-setcolorder(dt.salmontime,c(&#39;Quantifier&#39;,&#39;LibSize&#39;,&#39;QuantTime&#39;,&#39;ResamplingTime&#39;,&#39;TotalTime&#39;))
-
-dt.salmontime$LibSize %&lt;&gt;% factor(levels = c(&#39;2.5e+07&#39;,&#39;5e+07&#39;,&#39;1e+08&#39;),
-                                  labels = c(&#39;25&#39;,&#39;50&#39;,&#39;100&#39;))
-
-dt.salmontime$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),
-                                     labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
-
-dt.salmontime &lt;- dt.salmontime[order(Quantifier,LibSize),]
-
-cnames &lt;- c(&#39;Resampling\nMethod&#39;,
-            &#39;Library Size\n(million read pairs)&#39;,
-            &#39;Optimization&#39;,
-            &#39;Resampling&#39;,
-            &#39;Total&#39;)
-
-tb.salmontime &lt;- kbl(x = dt.salmontime,
-                     format = &#39;latex&#39;,
-                     digits = 2,
-                     col.names = linebreak(cnames,align = &#39;c&#39;),
-                     align = &#39;ccccc&#39;,
-                     escape = FALSE,
-                     booktabs = TRUE) %&gt;%
-  add_header_above(c(&quot; &quot; = 2, &quot;Quantification Time (minutes)&quot; = 3)) %&gt;%
-  collapse_rows(1, latex_hline = &#39;major&#39;)
-
-kbl(x = dt.salmontime,
-    format = &#39;pipe&#39;,
-    digits = 2,
-    col.names = linebreak(cnames,align = &#39;c&#39;),
-    align = &#39;ccccc&#39;,
-    escape = FALSE,
-    booktabs = TRUE) %&gt;%
-  add_header_above(c(&quot; &quot; = 2, &quot;Quantification Time (minutes)&quot; = 3)) %&gt;%
-  collapse_rows(1, latex_hline = &#39;major&#39;)</code></pre>
-<table>
-<thead>
-<tr>
-<th style="empty-cells: hide;border-bottom:hidden;" colspan="2">
-</th>
-<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
-Quantification Time (minutes)
-</div>
-</th>
-</tr>
-<tr>
-<th style="text-align:center;">
-
-</th>
-<th style="text-align:center;">
-
-</th>
-<th style="text-align:center;">
-Optimization
-</th>
-<th style="text-align:center;">
-Resampling
-</th>
-<th style="text-align:center;">
-Total
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;vertical-align: middle !important;" rowspan="3">
-Bootstrap
-</td>
-<td style="text-align:center;">
-25
-</td>
-<td style="text-align:center;">
-1.79
-</td>
-<td style="text-align:center;">
-9.45
-</td>
-<td style="text-align:center;">
-11.24
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-3.22
-</td>
-<td style="text-align:center;">
-13.41
-</td>
-<td style="text-align:center;">
-16.64
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-100
-</td>
-<td style="text-align:center;">
-6.09
-</td>
-<td style="text-align:center;">
-19.15
-</td>
-<td style="text-align:center;">
-25.24
-</td>
-</tr>
-<tr>
-<td style="text-align:center;vertical-align: middle !important;" rowspan="3">
-Gibbs
-</td>
-<td style="text-align:center;">
-25
-</td>
-<td style="text-align:center;">
-1.78
-</td>
-<td style="text-align:center;">
-0.91
-</td>
-<td style="text-align:center;">
-2.69
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-3.22
-</td>
-<td style="text-align:center;">
-1.62
-</td>
-<td style="text-align:center;">
-4.85
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-100
-</td>
-<td style="text-align:center;">
-6.05
-</td>
-<td style="text-align:center;">
-3.01
-</td>
-<td style="text-align:center;">
-9.06
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div id="edger-comparison" class="section level1">
-<h1>edgeR comparison</h1>
-<p>The code chunk below generates Table 2.</p>
-<pre class="r"><code>dt.dte &lt;- merge(x = dt.time[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$&quot;,Method) &amp;
+<div id="time-comparison" class="section level1">
+<h1>Time comparison</h1>
+<p>Finally, the code chunk below generates Supplementary Figure S12.</p>
+<pre class="r"><code>dt.dte &lt;- merge(x = dt.time[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$|sleuth|Swish&quot;,Method) &amp;
                               grepl(&quot;Salmon&quot;,Quantifier) &amp;
                               Scenario == &#39;unbalanced&#39; &amp;
                               FC == &#39;fc2&#39;,c(&#39;LibsPerGroup&#39;,&#39;Method&#39;,&#39;Quantifier&#39;,&#39;Time&#39;)],
-                y = dt.roc[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$&quot;,Method) &amp;
+                y = dt.roc[grepl(&quot;edgeR-SC$|edgeR.legacy-SC$|sleuth|Swish&quot;,Method) &amp;
                              grepl(&quot;Salmon&quot;,Quantifier) &amp;
                              Scenario == &#39;unbalanced&#39; &amp;
                              FC == &#39;fc2&#39; &amp;
@@ -1635,283 +1302,58 @@ Gibbs
 
 dt.dte[,Time := 60*Time]
 
-dt.dte$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;,c(3,5,10)),
-                                labels = c(&#39;Three&#39;,&#39;Five&#39;,&#39;Ten&#39;))
+dt.dte$LibsPerGroup %&lt;&gt;% factor(levels = paste0(&#39;#Lib/Group = &#39;,c(3,5,10,100)),
+                                labels = c(&#39;Three&#39;,&#39;Five&#39;,&#39;Ten&#39;,&#39;Hundred&#39;))
 
-dt.dte$Method %&lt;&gt;% factor(levels = c(&#39;edgeR-SC&#39;,&#39;edgeR.legacy-SC&#39;),
-                          labels = c(&#39;edgeR-v4&#39;,&#39;edgeR-v3&#39;))
+dt.dte$Method %&lt;&gt;% factor(levels = c(&#39;edgeR.legacy-SC&#39;,&#39;edgeR-SC&#39;,&#39;sleuth-LRT&#39;,&#39;sleuth-Wald&#39;,&#39;Swish&#39;),
+                          labels = c(&#39;edgeR-v3&#39;,&#39;edgeR-v4&#39;,&#39;sleuth-LRT&#39;,&#39;sleuth-Wald&#39;,&#39;Swish&#39;))
 
 dt.dte$Quantifier %&lt;&gt;% factor(levels = c(&#39;Salmon-Boot&#39;,&#39;Salmon-Gibbs&#39;),
                               labels = c(&#39;Bootstrap&#39;,&#39;Gibbs&#39;))
 
-dt.dte.edger &lt;- dt.dte[Method == &#39;edgeR-v4&#39;,]
-setnames(dt.dte.edger,
-         old = c(&#39;Time&#39;,&#39;oTPR&#39;,&#39;oFDR&#39;),
-         new = c(&#39;Time.edgeR&#39;,&#39;oTPR.edgeR&#39;,&#39;oFDR.edgeR&#39;))
-dt.dte.edger.legacy &lt;- dt.dte[Method != &#39;edgeR-v4&#39;,]
-setnames(dt.dte.edger.legacy,
-         old = c(&#39;Time&#39;,&#39;oTPR&#39;,&#39;oFDR&#39;),
-         new = c(&#39;Time.edgeRLegacgy&#39;,&#39;oTPR.edgeRLegacgy&#39;,&#39;oFDR.edgeRLegacgy&#39;))
 
-dt.dte &lt;- merge(dt.dte.edger.legacy[,-2],dt.dte.edger[,-2],
-                by = c(&#39;LibsPerGroup&#39;,&#39;Quantifier&#39;),
-                all.x = TRUE,
-                sort = FALSE)
+fig.time &lt;- ggplot(data = dt.dte,aes(x = Method,y = Time)) +
+  facet_wrap(facets = &#39;Quantifier&#39;,nrow = 1) +
+  geom_col() +
+  coord_cartesian(ylim = c(0,270)) +
+  scale_y_continuous(breaks = seq(0,300,60)) +
+  theme_bw(base_size = bs,base_family = &#39;sans&#39;) +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 90),
+        axis.text = element_text(colour = &#39;black&#39;,size = bs),
+        strip.text = element_text(size = bs)) +
+  labs(x = NULL,y = &quot;Time (sec)&quot;)
 
-cnames &lt;- c(&#39;Samples per\nGroup&#39;,
-            &#39;Sampling\nMethod&#39;,
-            &#39;Time&#39;,
-            &#39;Power&#39;,
-            &#39;FDR&#39;,
-            &#39;Time&#39;,
-            &#39;Power&#39;,
-            &#39;FDR&#39;)
-
-tb.dte &lt;- kbl(x = dt.dte,
-              digits = 2,
-              format = &#39;latex&#39;,
-              escape = FALSE,
-              booktabs = TRUE,
-              col.names = linebreak(cnames,align = &#39;c&#39;),
-              align = &#39;llcccccc&#39;) %&gt;%
-  add_header_above(c(&quot; &quot; = 2, &quot;edgeR-v3&quot; = 3,&quot;edgeR-v4&quot; = 3)) %&gt;%
-  collapse_rows(1, latex_hline = &#39;major&#39;)
-
-kbl(x = dt.dte,
-    digits = 2,
-    format = &#39;pipe&#39;,
-    escape = FALSE,
-    booktabs = TRUE,
-    col.names = linebreak(cnames,align = &#39;c&#39;),
-    align = &#39;llcccccc&#39;) %&gt;%
-  add_header_above(c(&quot; &quot; = 2, &quot;edgeR-v3&quot; = 3,&quot;edgeR-v4&quot; = 3)) %&gt;%
-  collapse_rows(1, latex_hline = &#39;major&#39;)</code></pre>
-<table>
-<thead>
-<tr>
-<th style="empty-cells: hide;border-bottom:hidden;" colspan="2">
-</th>
-<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
-edgeR-v3
-</div>
-</th>
-<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
-edgeR-v4
-</div>
-</th>
-</tr>
-<tr>
-<th style="text-align:left;">
-
-</th>
-<th style="text-align:left;">
-
-</th>
-<th style="text-align:center;">
-Time
-</th>
-<th style="text-align:center;">
-Power
-</th>
-<th style="text-align:center;">
-FDR
-</th>
-<th style="text-align:center;">
-Time
-</th>
-<th style="text-align:center;">
-Power
-</th>
-<th style="text-align:center;">
-FDR
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
-Three
-</td>
-<td style="text-align:left;">
-Bootstrap
-</td>
-<td style="text-align:center;">
-6.79
-</td>
-<td style="text-align:center;">
-0.39
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-<td style="text-align:center;">
-3.54
-</td>
-<td style="text-align:center;">
-0.42
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Gibbs
-</td>
-<td style="text-align:center;">
-7.81
-</td>
-<td style="text-align:center;">
-0.38
-</td>
-<td style="text-align:center;">
-0.03
-</td>
-<td style="text-align:center;">
-4.46
-</td>
-<td style="text-align:center;">
-0.42
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-</tr>
-<tr>
-<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
-Five
-</td>
-<td style="text-align:left;">
-Bootstrap
-</td>
-<td style="text-align:center;">
-9.96
-</td>
-<td style="text-align:center;">
-0.71
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-<td style="text-align:center;">
-5.79
-</td>
-<td style="text-align:center;">
-0.73
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Gibbs
-</td>
-<td style="text-align:center;">
-11.38
-</td>
-<td style="text-align:center;">
-0.72
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-<td style="text-align:center;">
-7.21
-</td>
-<td style="text-align:center;">
-0.74
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-</tr>
-<tr>
-<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
-Ten
-</td>
-<td style="text-align:left;">
-Bootstrap
-</td>
-<td style="text-align:center;">
-17.78
-</td>
-<td style="text-align:center;">
-0.91
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-<td style="text-align:center;">
-10.95
-</td>
-<td style="text-align:center;">
-0.92
-</td>
-<td style="text-align:center;">
-0.05
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Gibbs
-</td>
-<td style="text-align:center;">
-20.60
-</td>
-<td style="text-align:center;">
-0.92
-</td>
-<td style="text-align:center;">
-0.04
-</td>
-<td style="text-align:center;">
-13.61
-</td>
-<td style="text-align:center;">
-0.94
-</td>
-<td style="text-align:center;">
-0.05
-</td>
-</tr>
-</tbody>
-</table>
+fig.time</code></pre>
+<p><img src="figure/simulation-large-supp.Rmd/simulation_dtetime-1.png" width="1800" style="display: block; margin: auto;" /></p>
 </div>
 <div id="output-files" class="section level1">
 <h1>Output files</h1>
-<p>Finally, figures and tables are exported to be included in the main
-paper.</p>
-<pre class="r"><code>fig.metrics &lt;- wrap_plots(A = fig.power,
-                          B = fig.fdr,
-                          C = fig.type1error,
-                          design = c(area(1,1,1,2),area(2,1),area(2,2)),
-                          heights = c(0.3,0.7),widths = c(3.5/6,1-3.5/6)) + 
+<p>In the code chunk below I save the figures in PNG format for the
+supplement.</p>
+<pre class="r"><code>dsg.area &lt;- c(area(1,1),area(1,2),
+              area(2,1,2,2),
+              area(3,1,3,2),
+              area(4,1,4,2))
+
+fig.metrics &lt;- wrap_plots(A = wrap_elements(fig.bcv.raw),
+                          B = wrap_elements(fig.bcv.scaled),
+                          C = wrap_elements(fig.power),
+                          D = wrap_elements(fig.power.1pct),
+                          E = wrap_elements(fig.roc),
+                          design = dsg.area,
+                          heights = c(2.75,1.625,1.625,3)/9) +
   plot_annotation(tag_levels = &#39;a&#39;,
                   theme = theme(plot.tag = element_text(size = bs)))
 
-ggsave(plot = fig.metrics,filename = file.path(path.misc,&#39;Figure-Metrics.pdf&#39;),
-       device = &#39;pdf&#39;,width = 6,height = 5,units = &#39;in&#39;,dpi = 300)
+fig.metrics</code></pre>
+<p><img src="figure/simulation-large-supp.Rmd/simulation_output-1.png" width="2100" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(plot = fig.metrics,filename = file.path(path.misc,&#39;SuppFigure-LargeN.png&#39;),
+       device = &#39;png&#39;,width = 7,height = 9,units = &#39;in&#39;,dpi = 300)
 
-fig.roc &lt;- wrap_plots(A = fig.roc.three.tpr,
-                      B = fig.roc.five.tpr,
-                      C = fig.roc.ten.tpr,
-                      D = fig.roc.three.fdr,
-                      E = fig.roc.five.fdr,
-                      `F` = fig.roc.ten.fdr,
-                      design = c(area(1,1),area(1,2),area(1,3),
-                                 area(2,1),area(2,2),area(2,3))) + 
-  plot_layout(guides = &#39;collect&#39;) &amp; theme(
-    legend.position = &#39;bottom&#39;,
-    legend.direction = &#39;horizontal&#39;)
 
-ggsave(plot = fig.roc,filename = file.path(path.misc,&#39;Figure-ROC.pdf&#39;),
-       device = &#39;pdf&#39;,width = 7,height = 5,units = &#39;in&#39;,dpi = 300)
-
-save_kable(tb.salmontime,file = file.path(path.misc,&#39;Table-QuantTime.tex&#39;))
-save_kable(tb.dte,file = file.path(path.misc,&#39;Table-DTETime.tex&#39;))</code></pre>
+ggsave(plot = fig.time,filename = file.path(path.misc,&#39;SuppFigure-LargeN-Time.png&#39;),
+       device = &#39;png&#39;,width = 6,height = 3,units = &#39;in&#39;,dpi = 300)</code></pre>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
@@ -1944,46 +1386,47 @@ attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
-[1] pkg_1.0           kableExtra_1.4.0  plyr_1.8.9        patchwork_1.3.0  
-[5] ggplot2_3.5.1     magrittr_2.0.3    data.table_1.16.0 workflowr_1.7.1  
+ [1] pkg_1.0           kableExtra_1.4.0  png_0.1-8         edgeR_4.0.16     
+ [5] limma_3.58.1      plyr_1.8.9        patchwork_1.3.0   ggplot2_3.5.1    
+ [9] magrittr_2.0.3    data.table_1.16.0 workflowr_1.7.1  
 
 loaded via a namespace (and not attached):
   [1] splines_4.3.3                 later_1.3.2                  
   [3] BiocIO_1.12.0                 bitops_1.0-8                 
   [5] filelock_1.0.3                R.oo_1.26.0                  
   [7] tibble_3.2.1                  XML_3.99-0.17                
-  [9] lifecycle_1.0.4               edgeR_4.0.16                 
- [11] rprojroot_2.0.4               processx_3.8.4               
+  [9] lifecycle_1.0.4               rprojroot_2.0.4              
+ [11] vroom_1.6.5                   processx_3.8.4               
  [13] lattice_0.22-5                ensembldb_2.26.0             
- [15] limma_3.58.1                  sass_0.4.9                   
- [17] rmarkdown_2.28                jquerylib_0.1.4              
- [19] yaml_2.3.10                   remotes_2.5.0                
- [21] httpuv_1.6.15                 sessioninfo_1.2.2            
- [23] pkgbuild_1.4.4                DBI_1.2.3                    
- [25] abind_1.4-8                   pkgload_1.4.0                
- [27] zlibbioc_1.48.2               GenomicRanges_1.54.1         
- [29] R.utils_2.12.3                purrr_1.0.2                  
- [31] AnnotationFilter_1.26.0       BiocGenerics_0.48.1          
- [33] RCurl_1.98-1.16               rappdirs_0.3.3               
- [35] git2r_0.33.0                  GenomeInfoDbData_1.2.11      
- [37] wasabi_1.0.1                  IRanges_2.36.0               
- [39] S4Vectors_0.40.2              fishpond_2.8.0               
- [41] svglite_2.1.3                 codetools_0.2-19             
- [43] DelayedArray_0.28.0           xml2_1.3.6                   
- [45] tidyselect_1.2.1              farver_2.1.2                 
- [47] matrixStats_1.4.1             stats4_4.3.3                 
- [49] BiocFileCache_2.10.2          GenomicAlignments_1.38.2     
- [51] jsonlite_1.8.9                ellipsis_0.3.2               
- [53] systemfonts_1.1.0             tools_4.3.3                  
- [55] progress_1.2.3                ragg_1.3.3                   
- [57] Rcpp_1.0.13                   glue_1.8.0                   
- [59] svMisc_1.2.3                  SparseArray_1.2.4            
- [61] xfun_0.47                     MatrixGenerics_1.14.0        
- [63] usethis_3.0.0                 GenomeInfoDb_1.38.8          
- [65] dplyr_1.1.4                   withr_3.0.1                  
- [67] BiocManager_1.30.25           fastmap_1.2.0                
- [69] rhdf5filters_1.14.1           fansi_1.0.6                  
- [71] callr_3.7.6                   digest_0.6.37                
+ [15] sass_0.4.9                    rmarkdown_2.28               
+ [17] jquerylib_0.1.4               yaml_2.3.10                  
+ [19] remotes_2.5.0                 httpuv_1.6.15                
+ [21] sessioninfo_1.2.2             pkgbuild_1.4.4               
+ [23] DBI_1.2.3                     abind_1.4-8                  
+ [25] pkgload_1.4.0                 zlibbioc_1.48.2              
+ [27] GenomicRanges_1.54.1          R.utils_2.12.3               
+ [29] purrr_1.0.2                   AnnotationFilter_1.26.0      
+ [31] BiocGenerics_0.48.1           RCurl_1.98-1.16              
+ [33] rappdirs_0.3.3                git2r_0.33.0                 
+ [35] GenomeInfoDbData_1.2.11       wasabi_1.0.1                 
+ [37] IRanges_2.36.0                S4Vectors_0.40.2             
+ [39] fishpond_2.8.0                svglite_2.1.3                
+ [41] codetools_0.2-19              DelayedArray_0.28.0          
+ [43] xml2_1.3.6                    tidyselect_1.2.1             
+ [45] farver_2.1.2                  matrixStats_1.4.1            
+ [47] stats4_4.3.3                  BiocFileCache_2.10.2         
+ [49] GenomicAlignments_1.38.2      jsonlite_1.8.9               
+ [51] ellipsis_0.3.2                systemfonts_1.1.0            
+ [53] tools_4.3.3                   progress_1.2.3               
+ [55] ragg_1.3.3                    Rcpp_1.0.13                  
+ [57] glue_1.8.0                    svMisc_1.2.3                 
+ [59] SparseArray_1.2.4             xfun_0.47                    
+ [61] MatrixGenerics_1.14.0         usethis_3.0.0                
+ [63] GenomeInfoDb_1.38.8           dplyr_1.1.4                  
+ [65] withr_3.0.1                   BiocManager_1.30.25          
+ [67] fastmap_1.2.0                 rhdf5filters_1.14.1          
+ [69] fansi_1.0.6                   callr_3.7.6                  
+ [71] digest_0.6.37                 gridGraphics_0.5-1           
  [73] R6_2.5.1                      mime_0.12                    
  [75] textshaping_0.4.0             colorspace_2.1-1             
  [77] gtools_3.9.5                  biomaRt_2.58.2               
@@ -1999,35 +1442,35 @@ loaded via a namespace (and not attached):
  [97] profvis_0.4.0                 ProtGenerics_1.34.0          
  [99] sleuth_0.30.1                 scales_1.3.0                 
 [101] Biobase_2.62.0                Rsubread_2.16.1              
-[103] png_0.1-8                     knitr_1.48                   
-[105] rstudioapi_0.16.0             tzdb_0.4.0                   
-[107] rjson_0.2.23                  curl_5.2.3                   
-[109] cachem_1.1.0                  rhdf5_2.46.1                 
-[111] stringr_1.5.1                 BiocVersion_3.18.1           
-[113] parallel_4.3.3                miniUI_0.1.1.1               
-[115] AnnotationDbi_1.64.1          restfulr_0.0.15              
-[117] desc_1.4.3                    pillar_1.9.0                 
-[119] grid_4.3.3                    vctrs_0.6.5                  
-[121] urlchecker_1.0.1              promises_1.3.0               
-[123] dbplyr_2.5.0                  xtable_1.8-4                 
-[125] tximport_1.30.0               evaluate_1.0.0               
-[127] readr_2.1.5                   GenomicFeatures_1.54.4       
-[129] locfit_1.5-9.10               cli_3.6.3                    
-[131] compiler_4.3.3                Rsamtools_2.18.0             
-[133] rlang_1.1.4                   crayon_1.5.3                 
-[135] labeling_0.4.3                ps_1.8.0                     
-[137] getPass_0.2-4                 fs_1.6.4                     
-[139] stringi_1.8.4                 viridisLite_0.4.2            
-[141] BiocParallel_1.36.0           munsell_0.5.1                
-[143] Biostrings_2.70.3             lazyeval_0.2.2               
-[145] devtools_2.4.5                Matrix_1.6-5                 
-[147] hms_1.1.3                     bit64_4.5.2                  
-[149] Rhdf5lib_1.24.2               KEGGREST_1.42.0              
-[151] statmod_1.5.0                 shiny_1.9.1                  
-[153] highr_0.11                    SummarizedExperiment_1.32.0  
-[155] interactiveDisplayBase_1.40.0 AnnotationHub_3.10.1         
-[157] memoise_2.0.1                 thematic_0.1.6               
-[159] bslib_0.8.0                   bit_4.5.0                    </code></pre>
+[103] knitr_1.48                    rstudioapi_0.16.0            
+[105] tzdb_0.4.0                    rjson_0.2.23                 
+[107] curl_5.2.3                    cachem_1.1.0                 
+[109] rhdf5_2.46.1                  stringr_1.5.1                
+[111] BiocVersion_3.18.1            parallel_4.3.3               
+[113] miniUI_0.1.1.1                AnnotationDbi_1.64.1         
+[115] restfulr_0.0.15               desc_1.4.3                   
+[117] pillar_1.9.0                  grid_4.3.3                   
+[119] vctrs_0.6.5                   urlchecker_1.0.1             
+[121] promises_1.3.0                dbplyr_2.5.0                 
+[123] xtable_1.8-4                  tximport_1.30.0              
+[125] evaluate_1.0.0                readr_2.1.5                  
+[127] GenomicFeatures_1.54.4        cli_3.6.3                    
+[129] locfit_1.5-9.10               compiler_4.3.3               
+[131] Rsamtools_2.18.0              rlang_1.1.4                  
+[133] crayon_1.5.3                  labeling_0.4.3               
+[135] ps_1.8.0                      getPass_0.2-4                
+[137] fs_1.6.4                      stringi_1.8.4                
+[139] viridisLite_0.4.2             BiocParallel_1.36.0          
+[141] munsell_0.5.1                 Biostrings_2.70.3            
+[143] lazyeval_0.2.2                devtools_2.4.5               
+[145] Matrix_1.6-5                  hms_1.1.3                    
+[147] bit64_4.5.2                   Rhdf5lib_1.24.2              
+[149] KEGGREST_1.42.0               statmod_1.5.0                
+[151] shiny_1.9.1                   highr_0.11                   
+[153] SummarizedExperiment_1.32.0   interactiveDisplayBase_1.40.0
+[155] AnnotationHub_3.10.1          memoise_2.0.1                
+[157] thematic_0.1.6                bslib_0.8.0                  
+[159] bit_4.5.0                    </code></pre>
 </div>
 </div>
 

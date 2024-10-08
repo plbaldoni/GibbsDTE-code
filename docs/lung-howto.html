@@ -14,7 +14,7 @@
 
 <title>Pre-processing the human lung cancer cell lines dataset</title>
 
-<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.28/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -358,7 +358,7 @@ div.tocify {
 <h1 class="title toc-ignore">Pre-processing the human lung cancer cell
 lines dataset</h1>
 <h4 class="author">Pedro L. Baldoni</h4>
-<h4 class="date">05 April, 2024</h4>
+<h4 class="date">09 October, 2024</h4>
 
 </div>
 
@@ -387,7 +387,7 @@ class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2024-04-05
+<strong>Last updated:</strong> 2024-10-09
 </p>
 <p>
 <strong>Checks:</strong> <span
@@ -518,15 +518,15 @@ project makes it easier to run your code on other machines.</p>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetreebebf9467a656497c42cb2a8f1a7e2e512b364682targetblankbebf946a">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetree529139fd5e42a74fb56dd280a7dfff3bf7ec88fdtargetblank529139fa">
 <span class="glyphicon glyphicon-ok text-success"
 aria-hidden="true"></span> <strong>Repository version:</strong>
-<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/bebf9467a656497c42cb2a8f1a7e2e512b364682" target="_blank">bebf946</a>
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/529139fd5e42a74fb56dd280a7dfff3bf7ec88fd" target="_blank">529139f</a>
 </a>
 </p>
 </div>
 <div
-id="strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetreebebf9467a656497c42cb2a8f1a7e2e512b364682targetblankbebf946a"
+id="strongRepositoryversionstrongahrefhttpsgithubcomplbaldoniGibbsDTEcodetree529139fd5e42a74fb56dd280a7dfff3bf7ec88fdtargetblank529139fa"
 class="panel-collapse collapse">
 <div class="panel-body">
 <p>
@@ -536,7 +536,7 @@ reproducibility.
 </p>
 <p>
 The results in this page were generated with repository version
-<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/bebf9467a656497c42cb2a8f1a7e2e512b364682" target="_blank">bebf946</a>.
+<a href="https://github.com/plbaldoni/GibbsDTE-code/tree/529139fd5e42a74fb56dd280a7dfff3bf7ec88fd" target="_blank">529139f</a>.
 See the <em>Past versions</em> tab to see a history of the changes made
 to the R Markdown and HTML files.
 </p>
@@ -843,8 +843,17 @@ Ignored files:
     Ignored:    output/lung/
     Ignored:    output/simulation/
 
+Untracked files:
+    Untracked:  code/simulation-large/
+    Untracked:  output/simulation-large/
+    Untracked:  renv.lock
+    Untracked:  renv/
+
 Unstaged changes:
-    Modified:   analysis/lung.Rmd
+    Modified:   code/pkg/R/simulation-quant.R
+    Modified:   code/pkg/R/simulation-summary.R
+    Modified:   code/pkg/R/simulation-utils.R
+    Modified:   code/pkg/R/simulation.R
 
 </code></pre>
 <p>
@@ -890,6 +899,23 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/plbaldoni/GibbsDTE-code/70ab63fd10bf8e8afd7667ed31fcbfae025f105a/docs/lung-howto.html" target="_blank">70ab63f</a>
+</td>
+<td>
+Pedro Baldoni
+</td>
+<td>
+2024-04-05
+</td>
+<td>
+Publishing workflowr
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -1005,13 +1031,13 @@ Session information
 </p>
 <div id="workflowr-sessioninfo" class="collapse">
 <pre class="r"><code>sessionInfo()</code></pre>
-<pre><code>R version 4.3.2 (2023-10-31)
+<pre><code>R version 4.3.3 (2024-02-29)
 Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: CentOS Linux 7 (Core)
+Running under: Red Hat Enterprise Linux 9.4 (Plow)
 
 Matrix products: default
-BLAS:   /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRblas.so 
-LAPACK: /stornext/System/data/apps/R/R-4.3.2/lib64/R/lib/libRlapack.so;  LAPACK version 3.11.0
+BLAS:   /stornext/System/data/software/rhel/9/base/tools/R/4.3.3/lib64/R/lib/libRblas.so 
+LAPACK: /stornext/System/data/software/rhel/9/base/tools/R/4.3.3/lib64/R/lib/libRlapack.so;  LAPACK version 3.11.0
 
 locale:
  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
@@ -1021,27 +1047,31 @@ locale:
  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
 [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 
-time zone: UTC
+time zone: Australia/Melbourne
 tzcode source: system (glibc)
 
 attached base packages:
-[1] stats     graphics  grDevices utils     datasets  methods   base     
+[1] stats     graphics  grDevices datasets  utils     methods   base     
 
 other attached packages:
 [1] workflowr_1.7.1
 
 loaded via a namespace (and not attached):
- [1] vctrs_0.6.5       httr_1.4.7        cli_3.6.2         knitr_1.45       
- [5] rlang_1.1.3       xfun_0.42         stringi_1.8.3     processx_3.8.3   
- [9] promises_1.2.1    jsonlite_1.8.8    glue_1.7.0        rprojroot_2.0.4  
-[13] git2r_0.33.0      htmltools_0.5.7   httpuv_1.6.14     ps_1.7.6         
-[17] sass_0.4.8        fansi_1.0.6       rmarkdown_2.25    jquerylib_0.1.4  
-[21] tibble_3.2.1      evaluate_0.23     fastmap_1.1.1     yaml_2.3.8       
-[25] lifecycle_1.0.4   whisker_0.4.1     stringr_1.5.1     compiler_4.3.2   
-[29] fs_1.6.3          pkgconfig_2.0.3   Rcpp_1.0.12       rstudioapi_0.15.0
-[33] later_1.3.2       digest_0.6.34     R6_2.5.1          utf8_1.2.4       
-[37] pillar_1.9.0      callr_3.7.5       magrittr_2.0.3    bslib_0.6.1      
-[41] tools_4.3.2       cachem_1.0.8      getPass_0.2-4    </code></pre>
+ [1] jsonlite_1.8.9      compiler_4.3.3      BiocManager_1.30.25
+ [4] renv_1.0.9          promises_1.3.0      Rcpp_1.0.13        
+ [7] stringr_1.5.1       git2r_0.33.0        callr_3.7.6        
+[10] later_1.3.2         jquerylib_0.1.4     yaml_2.3.10        
+[13] fastmap_1.2.0       R6_2.5.1            knitr_1.48         
+[16] tibble_3.2.1        rprojroot_2.0.4     bslib_0.8.0        
+[19] pillar_1.9.0        rlang_1.1.4         utf8_1.2.4         
+[22] cachem_1.1.0        stringi_1.8.4       httpuv_1.6.15      
+[25] xfun_0.47           getPass_0.2-4       fs_1.6.4           
+[28] sass_0.4.9          cli_3.6.3           magrittr_2.0.3     
+[31] ps_1.8.0            digest_0.6.37       processx_3.8.4     
+[34] rstudioapi_0.16.0   lifecycle_1.0.4     vctrs_0.6.5        
+[37] evaluate_1.0.0      glue_1.8.0          whisker_0.4.1      
+[40] fansi_1.0.6         rmarkdown_2.28      httr_1.4.7         
+[43] tools_4.3.3         pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
 </div>
 </div>
 
