@@ -299,7 +299,7 @@ fig.fdr.kallisto.10
 
 Below is the code chunk used to generate Supplementary Figure S9.
 
-```{r simulation_roc,fig.width = 6,fig.height = 5}
+```{r simulation_roc,fig.width = 7,fig.height = 5}
 dt.rcurve <- dt.roc[FC == 'fc2' &
                       grepl("edgeR-SC|edgeR-SC\\.n",Method) &
                       Scenario == 'unbalanced',]
@@ -311,23 +311,61 @@ dt.rcurve$Method %<>%
   factor(levels = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC')) %<>%
   mapvalues(from = c(paste0('edgeR-SC.n',seq(10,90,10)),'edgeR-SC'),to = paste0(seq(10,100,10)))
 
-fig.roc <- ggplot(data = dt.rcurve,aes(x = oFDR,y = oTPR,group = Method,color = Method)) +
-  facet_grid(rows = vars(LibsPerGroup),cols = vars(Quantifier)) +
-  geom_vline(xintercept = c(0.01,0.05,0.1,0.15,0.2),linetype = 'dashed',linewidth = 0.25,color = 'gray') +
-  geom_hline(yintercept = c(0,0.25,0.5,0.75,1),linetype = 'dashed',linewidth = 0.25,color = 'gray') +
-  geom_line(linewidth = 0.5) +
-  geom_point(aes(shape = as.factor(nFDR)),size = 3) +
-  scale_y_continuous(limits = c(0,1)) +
-  scale_x_continuous(limits = c(0,0.2)) +
-  scale_color_viridis_d(direction = -1) +
-  theme_bw(base_size = bs,base_family = 'sans') +
-  theme(panel.grid = element_blank(),
-        legend.text = element_text(colour = 'black',size = bs),
-        axis.text = element_text(colour = 'black',size = bs),
-        strip.text = element_text(colour = 'black',size = bs)) +
-  labs(x = 'Observed FDR',y = 'Observed power',shape = 'Nominal FDR',color = 'Resamples')
+dt.rcurve.long <- melt(dt.rcurve,
+                       id.vars = c('Genome','Length','FC','Reads','TxPerGene','Scenario','LibsPerGroup','Quantifier','Method','nFDR'),
+                       measure.vars = c('oTPR','oFDR'),
+                       variable.name = 'Type',
+                       value.name = 'Value')
 
-fig.roc
+foo <- function(x,lib,type,ylab,title = NULL,base_size = bs,legend = TRUE,...){
+  sub.x <- x[LibsPerGroup == lib & Type == type,]
+  
+  sub.x$nFDR_char <- roundPretty(sub.x$nFDR,digits = 2)
+  sub.x$nFDR_char %<>% factor(levels = c('0.01','0.05','0.10','0.15','0.20'))
+  
+  shape <- 21:25
+  names(shape) <- c('0.01','0.05','0.10','0.15','0.20')
+  
+  p <- ggplot(data = sub.x, aes(x = Method,y = Value,group = interaction(nFDR_char,Quantifier))) +
+    geom_line(aes(color = Quantifier),linewidth = 0.25) +
+    geom_point(aes(shape = nFDR_char,color = Quantifier,fill = Quantifier),size = 1.25) +
+    theme_bw(base_size = bs,base_family = 'sans') +
+    scale_color_manual(values = c('Bootstrap (kallisto)' = 'green3','Bootstrap (Salmon)' = 'red','Gibbs (Salmon)' = 'blue')) +
+    scale_fill_manual(values = c('Bootstrap (kallisto)' = 'green3','Bootstrap (Salmon)' = 'red','Gibbs (Salmon)' = 'blue'),guide = "none") +
+    scale_shape_manual(values = shape) +
+    coord_cartesian(...) +
+    theme(panel.grid = element_blank(),
+          plot.title = element_text(hjust = 0.5,size = base_size),
+          axis.text = element_text(colour = 'black',size = base_size),
+          strip.text = element_text(colour = 'black',size = base_size)) +
+    labs(x = 'Number of Resamples',y = ylab,shape = 'Nominal FDR',color = 'Method',title = title) +
+    if (legend == TRUE) {theme(legend.background = element_rect(fill = alpha('white', 0)),
+                               legend.text = element_text(size = base_size),
+                               legend.title = element_text(size = base_size),
+                               legend.margin = margin(0, 0, 0, 0))} else theme(legend.position = 'none')
+  p
+}
+
+fig.roc.three.tpr <- foo(dt.rcurve.long,lib = 'Three samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.1,0.7)) + labs(x = NULL,title = "n = 3")
+fig.roc.five.tpr <- foo(dt.rcurve.long,lib = 'Five samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.55,0.9)) + labs(x = NULL,y = NULL,title = "n = 5")
+fig.roc.ten.tpr <- foo(dt.rcurve.long,lib = 'Ten samples per group',type = 'oTPR',ylab = 'Observed Power',ylim = c(0.875,0.975)) + labs(x = NULL,y = NULL,title = "n = 10") + scale_y_continuous(breaks = c(0.88,0.92,0.96))
+
+fig.roc.three.fdr <- foo(dt.rcurve.long,lib = 'Three samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2))
+fig.roc.five.fdr <- foo(dt.rcurve.long,lib = 'Five samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2)) + labs(y = NULL)
+fig.roc.ten.fdr <- foo(dt.rcurve.long,lib = 'Ten samples per group',type = 'oFDR',ylab = 'Observed FDR',ylim = c(0,0.2)) + labs(y = NULL)
+
+wrap_plots(A = fig.roc.three.tpr,
+           B = fig.roc.five.tpr,
+           C = fig.roc.ten.tpr,
+           D = fig.roc.three.fdr,
+           E = fig.roc.five.fdr,
+           `F` = fig.roc.ten.fdr,
+           design = c(area(1,1),area(1,2),area(1,3),
+                      area(2,1),area(2,2),area(2,3))) + 
+  plot_layout(guides = 'collect') & theme(
+    legend.position = 'bottom',
+    legend.direction = 'horizontal',
+    legend.box = 'vertical')
 ```
 
 # Quantification time
@@ -429,6 +467,19 @@ ggsave(plot = fig.metrics.kallisto.5,filename = file.path(path.misc,'SuppFigure-
        device = 'pdf',width = 6,height = 8,units = 'in',dpi = 300)
 ggsave(plot = fig.metrics.kallisto.10,filename = file.path(path.misc,'SuppFigure-Metrics-kallisto-10.pdf'),
        device = 'pdf',width = 6,height = 8,units = 'in',dpi = 300)
+
+fig.roc <- wrap_plots(A = fig.roc.three.tpr,
+           B = fig.roc.five.tpr,
+           C = fig.roc.ten.tpr,
+           D = fig.roc.three.fdr,
+           E = fig.roc.five.fdr,
+           `F` = fig.roc.ten.fdr,
+           design = c(area(1,1),area(1,2),area(1,3),
+                      area(2,1),area(2,2),area(2,3))) + 
+  plot_layout(guides = 'collect') & theme(
+    legend.position = 'bottom',
+    legend.direction = 'horizontal',
+    legend.box = 'vertical')
 
 ggsave(plot = fig.roc,filename = file.path(path.misc,'SuppFigure-ROC.pdf'),
        device = 'pdf',width = 7,height = 5,units = 'in',dpi = 300)
